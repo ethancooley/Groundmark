@@ -4,6 +4,8 @@
 
 Groundmark is a free Chrome extension that checks each sentence of a Google AI Overview against the pages Google cited for it. Every sentence gets one of four verdicts, with the exact passage from the source that backs it up (or doesn't) and a link that opens the page scrolled to that passage.
 
+**[Add Groundmark to Chrome](https://chromewebstore.google.com/detail/mhfdggfjdiphhboegcnlkaialmmhjodl)** · Chrome 138 or later
+
 It runs entirely on your computer. Verdicts come from **Gemini Nano**, the language model built into Chrome. There's no server, no account, no API key, and nothing to pay.
 
 | Verdict | Meaning |
@@ -75,6 +77,10 @@ If Chrome's model isn't available on a computer, the extension falls back to **l
 - **Confidence is computed, not self-reported.** Small models rate their own certainty poorly, so confidence comes from whether the quote is verbatim and whether the verdict agrees with simple word overlap.
 - **Uncertainty is explicit.** "Not found" is not "false." Unreadable sources get "Couldn't check," never a guess.
 
+## Install
+
+Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/mhfdggfjdiphhboegcnlkaialmmhjodl). A setup page opens automatically: allow Groundmark to read the pages Google cites, and download Chrome's on-device model if your computer supports it. Then search on Google as usual.
+
 ## Run it locally
 
 Requirements: Node 20+ and Chrome 138 or later.
@@ -104,6 +110,8 @@ The site is fully static, so it's free on Vercel's Hobby plan.
 4. Deploy. The download button serves `/groundmark-extension.zip`.
 
 ## Publish to the Chrome Web Store
+
+Listing: https://chromewebstore.google.com/detail/mhfdggfjdiphhboegcnlkaialmmhjodl (item ID `mhfdggfjdiphhboegcnlkaialmmhjodl`).
 
 `npm run package-extension` (also run by every build) writes `web/public/groundmark-extension.zip`, ready to upload:
 

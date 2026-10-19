@@ -8,6 +8,7 @@ export const SITE = {
   course: "Responsible AI, Duke University AI for Product Innovation (AIPI)",
   github: "https://github.com/ethancooley/groundmark",
   download: "/groundmark-extension.zip",
+  chromeStore: "https://chromewebstore.google.com/detail/mhfdggfjdiphhboegcnlkaialmmhjodl",
 };
 
 export type VerdictKey = "supported" | "not_found" | "contradicted" | "unverifiable";

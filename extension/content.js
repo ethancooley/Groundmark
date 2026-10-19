@@ -456,7 +456,7 @@
       tallyEl.append(chip);
     }
     try {
-      chrome.runtime.sendMessage({ type: "tally", tally: { ...t, total, url: location.href } }).catch(() => {});
+      chrome.runtime.sendMessage({ type: "tally", tally: { ...t, total } }).catch(() => {});
     } catch {
       // The extension was reloaded; this page's copy of the script is orphaned.
     }

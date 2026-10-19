@@ -55,7 +55,11 @@ export default function Lab() {
       <main className="wrap-narrow py-12">
         <p className="rounded-[14px] border border-line bg-surface p-4 text-[14.5px] leading-relaxed text-ink-soft">
           This page copies the structure of an AI Overview, with real cited pages, so you can watch the extension work
-          without depending on Google&rsquo;s layout. Install the extension, then reload this page. Some sentences here
+          without depending on Google&rsquo;s layout.{" "}
+          <a href={SITE.chromeStore} target="_blank" rel="noreferrer" className="font-semibold text-link hover:underline">
+            Install the extension
+          </a>
+          , then reload this page. Some sentences here
           are wrong on purpose.
         </p>
 

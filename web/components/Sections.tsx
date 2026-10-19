@@ -165,10 +165,14 @@ export function Responsible() {
 
 export function Install() {
   const steps = [
-    { title: "Download the extension", body: "Get the zip file and unzip it somewhere you'll keep it." },
-    { title: "Open Chrome's extension page", body: "Go to chrome://extensions and turn on Developer mode in the top right." },
-    { title: "Load it", body: "Click Load unpacked and choose the unzipped Groundmark folder." },
-    { title: "Finish setup", body: "Allow it to read cited pages and download Chrome's on-device AI. Then search on Google as usual." },
+    { title: "Add it to Chrome", body: "Install Groundmark from the Chrome Web Store. A setup page opens automatically." },
+    { title: "Finish setup", body: "Allow it to read the pages Google cites, and download Chrome's on-device AI if your computer supports it." },
+    { title: "Search as usual", body: "When an AI Overview appears, each sentence gets a verdict. Hover one to see the evidence." },
+  ];
+  const manual = [
+    "Download the zip below and unzip it somewhere you'll keep it.",
+    "Go to chrome://extensions and turn on Developer mode in the top right.",
+    "Click Load unpacked and choose the unzipped folder.",
   ];
   return (
     <section id="install" aria-labelledby="install-title" className="wrap py-32 sm:py-44">
@@ -184,18 +188,19 @@ export function Install() {
         </p>
         <div className="mt-10 flex flex-wrap justify-center gap-3">
           <a
-            href={SITE.download}
-            download
+            href={SITE.chromeStore}
+            target="_blank"
+            rel="noreferrer"
             className="rounded-full bg-ink px-8 py-4 text-[17px] font-semibold text-white transition-transform hover:scale-[1.03]"
           >
-            Download for Chrome
+            Add to Chrome
           </a>
           <a href="/lab" className="rounded-full px-6 py-4 text-[17px] font-semibold text-link hover:underline">
             Try it on the test page
           </a>
         </div>
       </div>
-      <ol className="mx-auto mt-20 grid max-w-[1000px] gap-8 sm:grid-cols-2 lg:grid-cols-4">
+      <ol className="mx-auto mt-20 grid max-w-[900px] gap-8 sm:grid-cols-3">
         {steps.map((s, i) => (
           <li key={s.title} className="border-t border-line pt-5">
             <p className="text-[13px] font-semibold text-slate">Step {i + 1}</p>
@@ -204,9 +209,21 @@ export function Install() {
           </li>
         ))}
       </ol>
-      <p className="mx-auto mt-12 max-w-[60ch] text-center text-[14px] text-slate">
-        Groundmark isn&rsquo;t in the Chrome Web Store yet, so Chrome installs it in Developer mode. The full source
-        code is on{" "}
+      <details className="mx-auto mt-14 max-w-[640px] rounded-[18px] border border-line bg-surface p-5 text-[15px] text-ink-soft">
+        <summary className="cursor-pointer font-semibold text-ink">Install without the Chrome Web Store</summary>
+        <ol className="mt-3 list-decimal space-y-1.5 pl-5">
+          {manual.map((m) => (
+            <li key={m}>{m}</li>
+          ))}
+        </ol>
+        <p className="mt-4">
+          <a href={SITE.download} download className="font-semibold text-link underline-offset-4 hover:underline">
+            Download the extension zip
+          </a>
+        </p>
+      </details>
+      <p className="mx-auto mt-8 max-w-[60ch] text-center text-[14px] text-slate">
+        The full source code is on{" "}
         <a href={SITE.github} className="text-link underline-offset-4 hover:underline">
           GitHub
         </a>
