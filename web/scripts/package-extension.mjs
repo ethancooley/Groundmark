@@ -1,4 +1,4 @@
-// Builds a store-ready zip of ../extension into public/overview-check-extension.zip.
+// Builds a store-ready zip of ../extension into public/groundmark-extension.zip.
 //
 // - manifest.json sits at the top level of the zip, as the Chrome Web Store requires
 // - the developer-only evaluation page (eval/) is left out
@@ -14,7 +14,7 @@ import { zipSync, strToU8 } from "fflate";
 
 const root = resolve(import.meta.dirname, "..");
 const extDir = resolve(root, "../extension");
-const outFile = join(root, "public", "overview-check-extension.zip");
+const outFile = join(root, "public", "groundmark-extension.zip");
 
 const siteUrl = (
   process.env.SITE_URL ||
@@ -48,6 +48,6 @@ for (const file of walk(extDir)) {
 mkdirSync(join(root, "public"), { recursive: true });
 writeFileSync(outFile, zipSync(files));
 console.log(
-  `Packaged ${Object.keys(files).length} files (v${manifest.version}) -> public/overview-check-extension.zip` +
+  `Packaged ${Object.keys(files).length} files (v${manifest.version}) -> public/groundmark-extension.zip` +
     (siteUrl ? ` with the lab page on ${new URL(siteUrl).host}` : " (set SITE_URL to include your lab page)"),
 );

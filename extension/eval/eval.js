@@ -143,7 +143,7 @@ $("save").addEventListener("click", () => {
   const blob = new Blob([JSON.stringify(lastReport, null, 2)], { type: "application/json" });
   const a = el("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `overview-check-eval-${lastReport.ranAt.slice(0, 19).replace(/[:T]/g, "-")}.json`;
+  a.download = `groundmark-eval-${lastReport.ranAt.slice(0, 19).replace(/[:T]/g, "-")}.json`;
   a.click();
 });
 

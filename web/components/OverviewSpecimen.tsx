@@ -50,7 +50,7 @@ function Sparkle() {
 }
 
 /**
- * A stylized AI Overview with Overview Check running on it. Purely
+ * A stylized AI Overview with Groundmark running on it. Purely
  * illustrative; it doesn't copy any search engine's branding.
  */
 export function OverviewSpecimen({
@@ -101,7 +101,7 @@ export function OverviewSpecimen({
                   <path d="M4.6 8 7 10.4 11.6 5" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </span>
-              Overview Check
+              Groundmark
             </span>
             <span className="text-slate">
               {done ? `${supported} of ${sentences.length} sentences supported by their sources` : `Checking ${sentences.length} sentences…`}

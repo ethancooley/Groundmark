@@ -156,9 +156,9 @@ export function createChecker(env) {
     let explanation = "None of the cited pages could be read, so this sentence couldn't be checked.";
     if (claimDocs.length === 0) explanation = "Google didn't attach a readable source to this sentence.";
     else if (statuses.size === 1 && statuses.has("unsupported_type"))
-      explanation = "The cited source is a file type Overview Check can't read yet, such as a PDF.";
+      explanation = "The cited source is a file type Groundmark can't read yet, such as a PDF.";
     else if (statuses.size === 1 && statuses.has("blocked"))
-      explanation = "The cited link points somewhere Overview Check won't open, such as a local address.";
+      explanation = "The cited link points somewhere Groundmark won't open, such as a local address.";
     return {
       id: claim.id,
       claim: claim.text,

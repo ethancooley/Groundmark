@@ -39,4 +39,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-public/overview-check-extension.zip
+public/groundmark-extension.zip

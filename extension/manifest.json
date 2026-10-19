@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Overview Check",
-  "short_name": "Overview Check",
+  "name": "Groundmark",
+  "short_name": "Groundmark",
   "version": "1.0.0",
   "description": "Checks each sentence of a Google AI Overview against the pages it cites, on your own computer, and shows you the evidence.",
   "minimum_chrome_version": "138",
@@ -19,7 +19,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Overview Check",
+    "default_title": "Groundmark",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png"

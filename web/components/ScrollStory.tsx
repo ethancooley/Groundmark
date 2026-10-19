@@ -179,7 +179,7 @@ export function ScrollStory() {
           From sentence to source in seconds.
         </h2>
         <p className="lede mx-auto mt-6 max-w-[42ch]">
-          Most people never click through to check an AI answer. Overview Check does the clicking, the reading, and the
+          Most people never click through to check an AI answer. Groundmark does the clicking, the reading, and the
           comparing for you.
         </p>
       </div>

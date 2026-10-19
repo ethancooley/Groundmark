@@ -1,13 +1,13 @@
 export const SITE = {
-  name: "Overview Check",
-  tagline: "Google's AI cites its sources. Overview Check reads them.",
+  name: "Groundmark",
+  tagline: "Google's AI cites its sources. Groundmark reads them.",
   description:
     "A Chrome extension that checks each sentence of a Google AI Overview against the pages it cites, and shows you the evidence.",
   author: "Ethan Cooley",
   authorUrl: "https://ethancooley.com",
   course: "Responsible AI, Duke University AI for Product Innovation (AIPI)",
-  github: "https://github.com/ethancooley/overview-check",
-  download: "/overview-check-extension.zip",
+  github: "https://github.com/ethancooley/groundmark",
+  download: "/groundmark-extension.zip",
 };
 
 export type VerdictKey = "supported" | "not_found" | "contradicted" | "unverifiable";
@@ -99,7 +99,7 @@ export const EXAMPLE = {
     {
       text: "Energy drinks often pack more caffeine than their labels suggest.",
       verdict: "unverifiable" as VerdictKey,
-      explanation: "The cited source is a PDF, which Overview Check can't read yet.",
+      explanation: "The cited source is a PDF, which Groundmark can't read yet.",
       quote: "",
       site: "Linked report (PDF)",
       host: "",

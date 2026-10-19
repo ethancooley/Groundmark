@@ -43,7 +43,7 @@ export function Verdicts() {
             Four verdicts. No guessing.
           </h2>
           <p className="lede mt-6 max-w-[34ch]">
-            Overview Check judges one thing: whether the page Google cited backs the sentence. It doesn&rsquo;t decide
+            Groundmark judges one thing: whether the page Google cited backs the sentence. It doesn&rsquo;t decide
             what&rsquo;s true in the world, and it says so when it can&rsquo;t tell.
           </p>
         </div>
@@ -117,7 +117,7 @@ export function Responsible() {
         </h2>
         <p className="lede mt-6 max-w-[46ch]">
           A tool that grades AI has to hold itself to the same standard. These are the design choices that make
-          Overview Check trustworthy, and the places where it isn&rsquo;t.
+          Groundmark trustworthy, and the places where it isn&rsquo;t.
         </p>
 
         <div className="mt-16 grid gap-px overflow-hidden rounded-[24px] border border-line bg-line md:grid-cols-2">
@@ -167,7 +167,7 @@ export function Install() {
   const steps = [
     { title: "Download the extension", body: "Get the zip file and unzip it somewhere you'll keep it." },
     { title: "Open Chrome's extension page", body: "Go to chrome://extensions and turn on Developer mode in the top right." },
-    { title: "Load it", body: "Click Load unpacked and choose the unzipped Overview Check folder." },
+    { title: "Load it", body: "Click Load unpacked and choose the unzipped Groundmark folder." },
     { title: "Finish setup", body: "Allow it to read cited pages and download Chrome's on-device AI. Then search on Google as usual." },
   ];
   return (
@@ -205,7 +205,7 @@ export function Install() {
         ))}
       </ol>
       <p className="mx-auto mt-12 max-w-[60ch] text-center text-[14px] text-slate">
-        Overview Check isn&rsquo;t in the Chrome Web Store yet, so Chrome installs it in Developer mode. The full source
+        Groundmark isn&rsquo;t in the Chrome Web Store yet, so Chrome installs it in Developer mode. The full source
         code is on{" "}
         <a href={SITE.github} className="text-link underline-offset-4 hover:underline">
           GitHub
@@ -259,6 +259,9 @@ export function Footer() {
               {SITE.author}
             </a>{" "}
             for {SITE.course}. Not affiliated with Google.
+          </p>
+          <p className="mt-2">
+            The name comes from grounding, the AI term for whether an answer is actually backed by its sources.
           </p>
         </div>
         <div className="flex gap-8">

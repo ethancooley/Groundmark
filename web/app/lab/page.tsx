@@ -5,7 +5,7 @@ import { Mark } from "@/components/Nav";
 
 export const metadata: Metadata = {
   title: `Test page | ${SITE.name}`,
-  description: "A test page with the structure of an AI Overview, for trying the Overview Check extension.",
+  description: "A test page with the structure of an AI Overview, for trying the Groundmark extension.",
 };
 
 const FDA = "https://www.fda.gov/consumers/consumer-updates/spilling-beans-how-much-caffeine-too-much";
@@ -37,7 +37,7 @@ function Cite({ href, label }: { href: string; label: string }) {
 /**
  * A stand-in for a search results page. The extension runs here exactly as it
  * does on Google, so the demo doesn't depend on Google's markup on a given day.
- * It deliberately uses Overview Check's own look, not Google's.
+ * It deliberately uses Groundmark's own look, not Google's.
  */
 export default function Lab() {
   return (

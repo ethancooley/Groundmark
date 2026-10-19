@@ -39,7 +39,7 @@ async function renderModel() {
     $("download").textContent = "Show download progress";
   } else
     setModelStatus(
-      "This computer or Chrome version can't run the on-device model. Overview Check will use lite mode instead.",
+      "This computer or Chrome version can't run the on-device model. Groundmark will use lite mode instead.",
       "warn",
     );
   refreshDone();
@@ -50,7 +50,7 @@ $("allow").addEventListener("click", async () => {
     const granted = await chrome.permissions.request(READ_PAGES);
     if (!granted) {
       $("read-status").className = "status warn";
-      $("read-status").textContent = "Not allowed. Overview Check can't check sentences until it can read the cited pages.";
+      $("read-status").textContent = "Not allowed. Groundmark can't check sentences until it can read the cited pages.";
     }
   } catch (e) {
     $("read-status").className = "status warn";

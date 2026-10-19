@@ -1,4 +1,4 @@
-// Overview Check: finds a Google AI Overview, splits it into sentences, sends
+// Groundmark: finds a Google AI Overview, splits it into sentences, sends
 // each sentence with the links Google attached to it for checking, and marks
 // each sentence with a verdict and the evidence behind it.
 (() => {
@@ -312,7 +312,7 @@
     b.dataset.verdict = "pending";
     b.tabIndex = 0;
     b.setAttribute("role", "button");
-    b.setAttribute("aria-label", `Overview Check: checking "${claim.text.slice(0, 80)}"`);
+    b.setAttribute("aria-label", `Groundmark: checking "${claim.text.slice(0, 80)}"`);
     b.innerHTML = svg("pending");
     b.addEventListener("mouseenter", () => showCard(claim, false));
     b.addEventListener("mouseleave", () => !state.pinned && hideCard());
@@ -366,7 +366,7 @@
     const v = r ? r.verdict : "pending";
     claim.badge.dataset.verdict = v;
     claim.badge.innerHTML = svg(v);
-    claim.badge.setAttribute("aria-label", `Overview Check: ${VERDICTS[v].title}. ${r?.explanation || ""}`);
+    claim.badge.setAttribute("aria-label", `Groundmark: ${VERDICTS[v].title}. ${r?.explanation || ""}`);
     if (state.highlights && r && state.highlights[v]) state.highlights[v].add(claim.range);
   }
 
@@ -377,7 +377,7 @@
     bar.dataset.theme = themeOf(state.root);
     bar.innerHTML = `
       <span class="ocx-mark" aria-hidden="true"></span>
-      <span class="ocx-bar-name">Overview Check</span>
+      <span class="ocx-bar-name">Groundmark</span>
       <span class="ocx-bar-status" role="status" aria-live="polite"></span>
       <span class="ocx-bar-tally"></span>
       <button type="button" class="ocx-bar-action" hidden></button>`;
@@ -411,7 +411,7 @@
 
     if (state.setupNeeded) {
       bar.dataset.state = "idle";
-      status.textContent = "Overview Check needs a one-time setup before it can read the pages Google cited.";
+      status.textContent = "Groundmark needs a one-time setup before it can read the pages Google cited.";
       action.hidden = false;
       action.textContent = "Finish setup";
       action.onclick = () => chrome.runtime.sendMessage({ type: "open_setup" }).catch(() => {});
@@ -473,7 +473,7 @@
     const card = document.createElement("div");
     card.className = "card";
     card.setAttribute("role", "dialog");
-    card.setAttribute("aria-label", "Overview Check evidence");
+    card.setAttribute("aria-label", "Groundmark evidence");
     card.addEventListener("mouseenter", () => (state.overCard = true));
     card.addEventListener("mouseleave", () => {
       state.overCard = false;

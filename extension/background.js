@@ -37,14 +37,14 @@ chrome.runtime.onConnect.addListener((port) => {
       await ensureOffscreen();
     } catch (e) {
       console.error(e);
-      port.postMessage({ type: "error", message: "Overview Check couldn't start its checker. Reload the page to try again." });
+      port.postMessage({ type: "error", message: "Groundmark couldn't start its checker. Reload the page to try again." });
       return;
     }
     const jobId = crypto.randomUUID();
     jobs.set(jobId, port);
     mine.add(jobId);
     chrome.runtime.sendMessage({ target: "offscreen", type: "check", jobId, claims: msg.claims }).catch(() => {
-      port.postMessage({ type: "error", message: "Overview Check couldn't reach its checker. Reload the page to try again." });
+      port.postMessage({ type: "error", message: "Groundmark couldn't reach its checker. Reload the page to try again." });
     });
   });
 });

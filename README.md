@@ -1,8 +1,8 @@
-# Overview Check
+# Groundmark
 
-**Google's AI cites its sources. Overview Check reads them.**
+**Google's AI cites its sources. Groundmark reads them.**
 
-Overview Check is a free Chrome extension that checks each sentence of a Google AI Overview against the pages Google cited for it. Every sentence gets one of four verdicts, with the exact passage from the source that backs it up (or doesn't) and a link that opens the page scrolled to that passage.
+Groundmark is a free Chrome extension that checks each sentence of a Google AI Overview against the pages Google cited for it. Every sentence gets one of four verdicts, with the exact passage from the source that backs it up (or doesn't) and a link that opens the page scrolled to that passage.
 
 It runs entirely on your computer. Verdicts come from **Gemini Nano**, the language model built into Chrome. There's no server, no account, no API key, and nothing to pay.
 
@@ -12,6 +12,8 @@ It runs entirely on your computer. Verdicts come from **Gemini Nano**, the langu
 | ❓ Not found in its source | The cited page doesn't back the specifics. The sentence may be true, but its own citation doesn't show it. |
 | ❌ Contradicted by its source | The cited page says something that conflicts with the sentence. |
 | ➖ Couldn't check | The source was a PDF, blocked, or missing. No guess is made. |
+
+The name comes from *grounding*, the AI term for whether an answer is actually backed by its sources.
 
 Built by Ethan Cooley for Responsible AI, Duke University AI for Product Innovation (AIPI).
 
@@ -26,7 +28,7 @@ AI Overviews sit above every Google result and link to sources that look like pr
 ## What's in this repo
 
 ```
-overview-check/
+groundmark/
 ├── extension/              Chrome extension (Manifest V3, no build step)
 │   ├── content.js          Finds the Overview, splits sentences, maps citations, shows verdicts
 │   ├── background.js       Routes checks from Google pages to the offscreen checker
@@ -99,11 +101,11 @@ The site is fully static, so it's free on Vercel's Hobby plan.
 1. Push this repo to GitHub.
 2. In Vercel, import the repo and set **Root Directory** to `web`. Leave "Include files outside the root directory" on: the site uses `../extension/lib` and the build packages `../extension`.
 3. Optional: set `SITE_URL` (for example `https://overviewcheck.app`) so the packaged extension also runs on your deployed lab page. Otherwise the Vercel production URL is used.
-4. Deploy. The download button serves `/overview-check-extension.zip`.
+4. Deploy. The download button serves `/groundmark-extension.zip`.
 
 ## Publish to the Chrome Web Store
 
-`npm run package-extension` (also run by every build) writes `web/public/overview-check-extension.zip`, ready to upload:
+`npm run package-extension` (also run by every build) writes `web/public/groundmark-extension.zip`, ready to upload:
 
 - `manifest.json` at the top level of the zip
 - development-only matches (`localhost`, `*.vercel.app`) removed, your own lab page added if `SITE_URL` is set

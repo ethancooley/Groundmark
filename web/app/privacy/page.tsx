@@ -5,7 +5,7 @@ import { Mark } from "@/components/Nav";
 
 export const metadata: Metadata = {
   title: `Privacy policy | ${SITE.name}`,
-  description: "What Overview Check reads, what it sends, and what it stores.",
+  description: "What Groundmark reads, what it sends, and what it stores.",
 };
 
 const UPDATED = "October 19, 2026";
@@ -29,7 +29,7 @@ export default function Privacy() {
           <section>
             <h2>The short version</h2>
             <p>
-              Overview Check has no server and no account. It does its work on your computer. We don&rsquo;t collect,
+              Groundmark has no server and no account. It does its work on your computer. We don&rsquo;t collect,
               receive, store, sell, or share any information about you or what you search.
             </p>
           </section>
@@ -58,7 +58,7 @@ export default function Privacy() {
             <p>
               Verdicts come from Gemini Nano, the language model built into Chrome, which runs on your computer. Chrome
               downloads the model once, from Google, when you turn it on during setup. The text being checked is
-              processed locally and isn&rsquo;t sent to Google or anyone else by Overview Check.
+              processed locally and isn&rsquo;t sent to Google or anyone else by Groundmark.
             </p>
           </section>
 
