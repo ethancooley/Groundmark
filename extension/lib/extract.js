@@ -22,7 +22,9 @@ function blocksFrom(root) {
  * @returns {{ title?: string, blocks: string[] }}
  */
 export function extractFromHtml(html, url, env) {
-  const doc = new env.DOMParser().parseFromString(html, "text/html");
+  // Drop <link> tags before parsing. The page's preload hints (fonts, scripts) are
+  // useless here, and without this Chrome flags them as unused preloads.
+  const doc = new env.DOMParser().parseFromString(String(html).replace(/<link\b[^>]*>/gi, ""), "text/html");
   // Give relative links a base, and strip anything executable or decorative.
   const base = doc.createElement("base");
   base.href = url;

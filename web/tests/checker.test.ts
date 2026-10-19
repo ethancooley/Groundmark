@@ -270,3 +270,20 @@ describe("number words", () => {
     expect(judgeHeuristic("That's about the amount in four cups of brewed coffee.", passages).verdict).toBe("supported");
   });
 });
+
+describe("extraction ignores the page's link tags", () => {
+  it("strips preload and stylesheet links but keeps the text", () => {
+    const html = `<html><head><title>T</title><link rel="preload" href="/f.woff2" as="font"><link rel="stylesheet" href="/s.css"></head>
+      <body><article><p>Up to 400 milligrams of caffeine a day seems safe for most adults, according to the page.</p></article></body></html>`;
+    let parsed = "";
+    const SpyParser = class extends DOMParser {
+      parseFromString(s: string, t: DOMParserSupportedType) {
+        parsed += s;
+        return super.parseFromString(s, t);
+      }
+    };
+    const doc = extractFromHtml(html, "https://ex.com/", env({ DOMParser: SpyParser }));
+    expect(parsed).not.toMatch(/<link/i);
+    expect(doc.blocks.join(" ")).toContain("400 milligrams");
+  });
+});
