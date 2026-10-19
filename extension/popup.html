@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Overview Check</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <img src="icons/icon48.png" alt="" width="28" height="28" />
+      <div>
+        <h1>Overview Check</h1>
+        <p class="sub">Checks Google's AI Overviews against the pages they cite.</p>
+      </div>
+    </header>
+
+    <section id="tab" aria-live="polite">
+      <p class="empty">Search on Google. When an AI Overview appears, each sentence gets a verdict.</p>
+    </section>
+
+    <section class="settings">
+      <label class="row">
+        <span>
+          <strong>Check automatically</strong>
+          <small>Off: a button appears on each Overview instead.</small>
+        </span>
+        <input type="checkbox" id="autoRun" role="switch" />
+      </label>
+
+      <details>
+        <summary>Checking server</summary>
+        <form id="serverForm">
+          <label for="apiBase">Server address</label>
+          <div class="field">
+            <input id="apiBase" type="url" required spellcheck="false" />
+            <button type="submit">Save</button>
+          </div>
+          <p id="serverStatus" class="status" role="status"></p>
+        </form>
+      </details>
+    </section>
+
+    <footer>
+      <p>Only the Overview's sentences and the links Google attached are sent for checking. Your search query is not.</p>
+    </footer>
+    <script src="config.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

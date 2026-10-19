@@ -1,0 +1,15 @@
+// Starter rows written from the pages as of October 2026. Re-read each page before relying on a label: pages change.
+// Aim for 200+ rows across health, science, history, products, and how-to topics, with all three labels represented.
+{"claim": "Up to 400 milligrams of caffeine a day seems safe for most adults.", "url": "https://www.mayoclinic.org/healthy-lifestyle/adult-health/in-depth/caffeine/art-20045678", "expected": "supported"}
+{"claim": "400 milligrams of caffeine is about the amount in four cups of brewed coffee.", "url": "https://www.mayoclinic.org/healthy-lifestyle/adult-health/in-depth/caffeine/art-20045678", "expected": "supported"}
+{"claim": "400 milligrams of caffeine is about the amount in eight cups of brewed coffee.", "url": "https://www.mayoclinic.org/healthy-lifestyle/adult-health/in-depth/caffeine/art-20045678", "expected": "contradicted"}
+{"claim": "400 milligrams of caffeine equals about 10 cans of cola.", "url": "https://www.mayoclinic.org/healthy-lifestyle/adult-health/in-depth/caffeine/art-20045678", "expected": "supported"}
+{"claim": "Caffeine is safe in any amount for teenagers.", "url": "https://www.mayoclinic.org/healthy-lifestyle/adult-health/in-depth/caffeine/art-20045678", "expected": "not_found"}
+{"claim": "The FDA has confirmed the safety of 400 milligrams of caffeine a day for most adults.", "url": "https://www.fda.gov/consumers/consumer-updates/spilling-beans-how-much-caffeine-too-much", "expected": "supported"}
+{"claim": "The FDA recommends children under 12 have no more than 100 milligrams of caffeine a day.", "url": "https://www.fda.gov/consumers/consumer-updates/spilling-beans-how-much-caffeine-too-much", "expected": "not_found"}
+{"claim": "The Eiffel Tower was completed in 1889.", "url": "https://en.wikipedia.org/wiki/Eiffel_Tower", "expected": "supported"}
+{"claim": "The Eiffel Tower was completed in 1901.", "url": "https://en.wikipedia.org/wiki/Eiffel_Tower", "expected": "contradicted"}
+{"claim": "The Eiffel Tower was designed by Gustave Eiffel's company.", "url": "https://en.wikipedia.org/wiki/Eiffel_Tower", "expected": "supported"}
+{"claim": "Mount Everest is the highest mountain on Earth above sea level.", "url": "https://en.wikipedia.org/wiki/Mount_Everest", "expected": "supported"}
+{"claim": "Mount Everest lies entirely within Nepal.", "url": "https://en.wikipedia.org/wiki/Mount_Everest", "expected": "contradicted"}
+{"claim": "The first ascent of Mount Everest was in 1953.", "url": "https://en.wikipedia.org/wiki/Mount_Everest", "expected": "supported"}

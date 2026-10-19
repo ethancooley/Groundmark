@@ -1,0 +1,88 @@
+/* Badges and the summary bar sit inside Google's page, so every rule is
+   prefixed and resets the properties Google's styles might change. */
+
+.ocx-badge {
+  all: initial;
+  display: inline-grid !important;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin: 0 2px 0 4px;
+  border-radius: 50%;
+  vertical-align: -3px;
+  color: #fff;
+  background: #8a94a6;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
+}
+.ocx-badge svg { width: 14px; height: 14px; display: block; }
+.ocx-badge:hover { transform: scale(1.15); }
+.ocx-badge:focus-visible { outline: 2px solid #1a56db; outline-offset: 2px; }
+.ocx-badge[data-verdict="supported"] { background: #12a150; }
+.ocx-badge[data-verdict="not_found"] { background: #e8590c; }
+.ocx-badge[data-verdict="contradicted"] { background: #e5383b; }
+.ocx-badge[data-verdict="pending"] svg { animation: ocx-spin 900ms linear infinite; }
+
+@keyframes ocx-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .ocx-badge[data-verdict="pending"] svg { animation: none; }
+  .ocx-badge { transition: none; }
+}
+
+/* Sentence marks use the CSS Custom Highlight API, so Google's DOM is never rewrapped. */
+::highlight(ocx-contradicted) { text-decoration: underline wavy #e5383b; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+::highlight(ocx-not_found) { text-decoration: underline dotted #e8590c; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+::highlight(ocx-focus) { background-color: rgba(255, 225, 77, 0.55); color: inherit; }
+
+.ocx-bar {
+  all: initial;
+  box-sizing: border-box;
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 10px 0 14px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font: 13px/1.4 "Google Sans Text", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #0f2240;
+  background: #eef2f8;
+  border: 1px solid rgba(15, 34, 64, 0.08);
+}
+.ocx-bar[data-theme="dark"] { color: #e8edf5; background: #1c2333; border-color: rgba(255, 255, 255, 0.1); }
+.ocx-bar[data-state="error"] { background: #fdecec; }
+.ocx-bar[data-theme="dark"][data-state="error"] { background: #3a1f24; }
+
+.ocx-mark {
+  width: 18px; height: 18px; border-radius: 5px; flex: none;
+  background: #0f2240 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='3' y='9' width='10' height='2.6' rx='1' fill='%23ffe14d'/%3E%3Cpath d='M4.6 8 7 10.4 11.6 5' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px no-repeat;
+}
+.ocx-bar[data-theme="dark"] .ocx-mark { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2); }
+.ocx-bar-name { font-weight: 600; letter-spacing: -0.01em; }
+.ocx-bar-status { opacity: 0.85; }
+.ocx-bar-tally { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+
+.ocx-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px 2px 3px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+  background: #fff; color: #0f2240; border: 1px solid rgba(15, 34, 64, 0.1);
+}
+.ocx-bar[data-theme="dark"] .ocx-chip { background: rgba(255, 255, 255, 0.06); color: #e8edf5; border-color: rgba(255, 255, 255, 0.12); }
+.ocx-chip svg { width: 14px; height: 14px; border-radius: 50%; color: #fff; background: #8a94a6; padding: 1px; }
+.ocx-chip[data-verdict="supported"] svg { background: #12a150; }
+.ocx-chip[data-verdict="not_found"] svg { background: #e8590c; }
+.ocx-chip[data-verdict="contradicted"] svg { background: #e5383b; }
+
+.ocx-bar-action {
+  all: initial;
+  font: 600 12.5px/1 "Google Sans Text", "Inter", system-ui, sans-serif;
+  padding: 7px 12px; border-radius: 999px; cursor: pointer;
+  color: #fff; background: #0f2240;
+}
+.ocx-bar[data-theme="dark"] .ocx-bar-action { color: #0f2240; background: #e8edf5; }
+.ocx-bar-action:focus-visible { outline: 2px solid #1a56db; outline-offset: 2px; }
+.ocx-bar-action[hidden] { display: none; }
+
+.ocx-card-host { all: initial; position: absolute; top: 0; left: 0; display: none; z-index: 2147483000; }

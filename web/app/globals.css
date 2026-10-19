@@ -1,0 +1,121 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/inter-tight";
+
+:root {
+  --paper: #f5f7fa;
+  --surface: #ffffff;
+  --ink: #0f2240;
+  --ink-soft: #2a3d5c;
+  --slate: #5b6b85;
+  --line: rgba(15, 34, 64, 0.1);
+  --highlighter: #ffe14d;
+  --link: #1a56db;
+
+  --v-supported: #12a150;
+  --v-not-found: #e8590c;
+  --v-contradicted: #e5383b;
+  --v-unverifiable: #8a94a6;
+
+  --font-text: "Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Inter Tight Variable", "Inter Variable", system-ui, sans-serif;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-slate: var(--slate);
+  --color-line: var(--line);
+  --color-highlighter: var(--highlighter);
+  --color-link: var(--link);
+  --color-supported: var(--v-supported);
+  --color-notfound: var(--v-not-found);
+  --color-contradicted: var(--v-contradicted);
+  --color-unverifiable: var(--v-unverifiable);
+  --font-sans: var(--font-text);
+  --font-display: var(--font-display);
+}
+
+html {
+  background: var(--paper);
+  color: var(--ink);
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-text);
+  font-size: 17px;
+  line-height: 1.6;
+  font-feature-settings: "cv11", "ss01";
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+::selection {
+  background: var(--highlighter);
+  color: var(--ink);
+}
+
+/* Display type: tight, heavy-ish, optically tracked like a product page. */
+.display {
+  font-family: var(--font-display);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+.headline {
+  font-family: var(--font-display);
+  font-weight: 620;
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+  text-wrap: balance;
+}
+.lede {
+  font-size: clamp(19px, 1.6vw, 23px);
+  line-height: 1.45;
+  letter-spacing: -0.012em;
+  color: var(--slate);
+  text-wrap: pretty;
+}
+
+/* The highlighter: the site's one signature mark. */
+.mark {
+  background-image: linear-gradient(var(--highlighter), var(--highlighter));
+  background-repeat: no-repeat;
+  background-position: 0 58%;
+  background-size: 100% 78%;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding: 0 0.12em;
+  color: var(--ink);
+}
+.mark-sweep {
+  background-size: var(--sweep, 0%) 78%;
+  /* One continuous box across line breaks, so the sweep runs line by line. */
+  box-decoration-break: slice;
+  -webkit-box-decoration-break: slice;
+}
+
+:focus-visible {
+  outline: 2.5px solid var(--link);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.wrap {
+  width: min(1180px, 100% - 40px);
+  margin-inline: auto;
+}
+.wrap-narrow {
+  width: min(760px, 100% - 40px);
+  margin-inline: auto;
+}
