@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SITE } from "@/lib/site";
 import { Mark } from "@/components/Nav";
 
@@ -43,10 +44,10 @@ export default function Lab() {
     <div className="min-h-dvh">
       <header className="border-b border-line bg-surface">
         <div className="wrap flex h-14 items-center gap-3">
-          <a href="/" className="flex items-center gap-2 text-[15px] font-semibold">
+          <Link href="/" className="flex items-center gap-2 text-[15px] font-semibold">
             <Mark size={22} />
             {SITE.name}
-          </a>
+          </Link>
           <span className="text-[14px] text-slate">Test page</span>
         </div>
       </header>

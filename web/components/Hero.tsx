@@ -15,11 +15,7 @@ export function Hero() {
 
   // The page's one orchestrated moment: verdicts land one by one, then the evidence is highlighted.
   useEffect(() => {
-    if (reduce) {
-      setResolved(total);
-      setSweep(1);
-      return;
-    }
+    if (reduce) return; // reduced motion: render the finished state below instead
     const timers: ReturnType<typeof setTimeout>[] = [];
     for (let i = 1; i <= total; i++) timers.push(setTimeout(() => setResolved(i), 900 + i * 520));
     const start = 900 + total * 520 + 450;
@@ -41,7 +37,9 @@ export function Hero() {
     };
   }, [reduce, total]);
 
-  const cardShown = resolved >= total;
+  const shownResolved = reduce ? total : resolved;
+  const shownSweep = reduce ? 1 : sweep;
+  const cardShown = shownResolved >= total;
 
   return (
     <section className="relative overflow-hidden pt-36 pb-32 sm:pt-44 sm:pb-44">
@@ -89,9 +87,9 @@ export function Hero() {
       >
         <div className="mx-auto max-w-[980px]">
           <OverviewSpecimen
-            resolved={resolved}
+            resolved={shownResolved}
             focus={cardShown ? CONTRADICTED : null}
-            sweep={sweep}
+            sweep={shownSweep}
             showCard={cardShown}
           />
           <p className="mt-8 text-center text-[13px] text-slate md:mt-28">

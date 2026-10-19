@@ -216,8 +216,10 @@ describe("model judge (SDK mocked)", () => {
     await runCheck({ claims: [{ id: "x", text: "The Eiffel Tower is 500 metres tall.", sources: ["https://t.example/"] }] }, (e) =>
       events.push(e as never),
     );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = events.find((e) => e.type === "result")!.result as Record<string, any>;
     expect(create).toHaveBeenCalledOnce();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const call = (create.mock.calls[0] as any[])[0];
     expect(call.tool_choice).toEqual({ type: "tool", name: "record_verdict" });
     expect(call.messages[0].content).toContain('<passage id="S1-P1"');
