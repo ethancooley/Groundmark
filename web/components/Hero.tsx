@@ -58,8 +58,8 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
         >
-          {SITE.name} is a Chrome extension that checks every sentence of an AI Overview against the page it cites, and
-          shows you the exact passage behind each verdict.
+          {SITE.name} is a free Chrome extension that checks every sentence of an AI Overview against the page it cites,
+          right on your computer, and shows you the exact passage behind each verdict.
         </motion.p>
         <motion.div
           className="mt-10 flex flex-wrap items-center justify-center gap-3"

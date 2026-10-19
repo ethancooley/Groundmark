@@ -36,6 +36,8 @@
     settings: { autoRun: true },
     pending: 0,
     error: null,
+    setupNeeded: false,
+    mode: null, // "model" (on-device AI) or "heuristic" (lite mode)
     highlights: null,
     card: null,
     pinned: null,
@@ -407,6 +409,14 @@
     action.hidden = true;
     tallyEl.replaceChildren();
 
+    if (state.setupNeeded) {
+      bar.dataset.state = "idle";
+      status.textContent = "Overview Check needs a one-time setup before it can read the pages Google cited.";
+      action.hidden = false;
+      action.textContent = "Finish setup";
+      action.onclick = () => chrome.runtime.sendMessage({ type: "open_setup" }).catch(() => {});
+      return;
+    }
     if (state.error) {
       bar.dataset.state = "error";
       status.textContent = state.error;
@@ -429,6 +439,13 @@
     status.textContent = t.pending
       ? `Checking ${total} ${total === 1 ? "sentence" : "sentences"} against the pages Google cited…`
       : `${t.supported} of ${total} ${total === 1 ? "sentence" : "sentences"} supported by the pages Google cited.`;
+    if (state.mode === "heuristic") {
+      const lite = document.createElement("span");
+      lite.className = "ocx-chip ocx-lite";
+      lite.textContent = "Lite mode";
+      lite.title = "The on-device AI isn't set up on this computer, so verdicts come from matching words and figures.";
+      tallyEl.append(lite);
+    }
     for (const v of ["supported", "not_found", "contradicted", "unverifiable"]) {
       if (!t[v]) continue;
       const chip = document.createElement("span");
@@ -528,7 +545,12 @@
         claim.scope === "sentence"
           ? "Checked against the links Google attached to this sentence."
           : "Google didn't attach links to this sentence, so it was checked against the Overview's sources.";
-      meta.textContent = `${scope} Confidence ${Math.round(r.confidence * 100)}%.`;
+      const engine =
+        r.mode === "heuristic"
+          ? "Lite check: matched words and figures, because the on-device AI isn't set up."
+          : "Checked on this computer by Gemini Nano.";
+      const level = r.confidence >= 0.75 ? "high" : r.confidence >= 0.5 ? "medium" : "low";
+      meta.textContent = r.verdict === "unverifiable" ? scope : `${scope} ${engine} Confidence: ${level}.`;
       card.append(meta);
     }
 
@@ -588,7 +610,15 @@
     const port = chrome.runtime.connect({ name: "ocx" });
     const open = new Set(claims.map((c) => c.id));
     port.onMessage.addListener((msg) => {
-      if (msg.type === "result") {
+      if (msg.type === "start") {
+        state.mode = msg.mode;
+        renderBar();
+      } else if (msg.type === "setup") {
+        state.setupNeeded = true;
+        resetClaims();
+        renderBar();
+        port.disconnect();
+      } else if (msg.type === "result") {
         const c = state.claims.get(msg.result.id);
         if (c) {
           c.result = msg.result;
@@ -617,6 +647,24 @@
     });
     renderBar();
   }
+
+  /** Removes this page's badges and marks so the Overview can be checked fresh. */
+  function resetClaims() {
+    for (const c of state.claims.values()) c.badge?.remove();
+    state.claims.clear();
+    state.checkedTexts.clear();
+    if (state.highlights) for (const h of Object.values(state.highlights)) h.clear();
+    hideCard();
+  }
+
+  // The background asks every tab to retry once the user finishes setup.
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg?.type === "ocx_retry" && state.setupNeeded) {
+      state.setupNeeded = false;
+      runCheck(true);
+    }
+    return false;
+  });
 
   function retryFailed() {
     const failed = [...state.claims.values()].filter((c) => !c.result);

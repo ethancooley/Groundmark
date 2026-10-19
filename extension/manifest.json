@@ -3,16 +3,19 @@
   "name": "Overview Check",
   "short_name": "Overview Check",
   "version": "1.0.0",
-  "description": "Checks each sentence of a Google AI Overview against the pages it cites, and shows you the evidence.",
+  "description": "Checks each sentence of a Google AI Overview against the pages it cites, on your own computer, and shows you the evidence.",
+  "minimum_chrome_version": "138",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["storage"],
+  "permissions": ["storage", "offscreen"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "action": {
     "default_popup": "popup.html",
@@ -35,7 +38,7 @@
         "http://localhost:3000/lab*",
         "https://*.vercel.app/lab*"
       ],
-      "js": ["config.js", "content.js"],
+      "js": ["content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
     }

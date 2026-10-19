@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Overview Check evaluation</title>
+    <link rel="icon" href="../icons/icon32.png" />
+    <style>
+      :root { --ink: #0f2240; --slate: #5b6b85; --line: rgba(15, 34, 64, 0.12); --paper: #f5f7fa; }
+      body { margin: 0; font: 15px/1.5 "Inter", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+      main { width: min(1100px, 100% - 40px); margin: 0 auto; padding: 48px 0; }
+      h1 { font-size: 34px; letter-spacing: -0.03em; margin: 0 0 6px; }
+      p { color: var(--slate); max-width: 70ch; }
+      .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 20px 0; }
+      button { font: inherit; font-weight: 600; padding: 9px 16px; border: 0; border-radius: 999px; background: var(--ink); color: #fff; cursor: pointer; }
+      button.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+      button:disabled { opacity: 0.5; }
+      textarea { width: 100%; min-height: 120px; font: 13px/1.5 ui-monospace, monospace; border: 1px solid var(--line); border-radius: 12px; padding: 12px; box-sizing: border-box; }
+      .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 24px 0; }
+      .stat { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+      .stat b { display: block; font-size: 28px; letter-spacing: -0.02em; }
+      table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+      th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+      th { font-size: 13px; color: var(--slate); font-weight: 600; }
+      td.ok { color: #12a150; font-weight: 700; }
+      td.bad { color: #e5383b; font-weight: 700; }
+      .quote { background: #fff3a3; }
+      .matrix td, .matrix th { text-align: center; }
+      #status { font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Evaluation</h1>
+      <p>
+        Runs labeled cases through the same checker the extension uses, on this computer, and reports how often its
+        verdicts match the labels. Edit the cases below (one JSON object per line: claim, url, expected), then run.
+        Grow the set to 200+ by reading pages yourself and recording what they actually say.
+      </p>
+      <textarea id="cases" spellcheck="false" aria-label="Labeled cases, one JSON object per line"></textarea>
+      <div class="controls">
+        <button type="button" id="run">Run evaluation</button>
+        <button type="button" id="allow" class="secondary" hidden>Allow reading pages</button>
+        <button type="button" id="save" class="secondary" disabled>Download results</button>
+        <span id="status" role="status"></span>
+      </div>
+      <div id="report"></div>
+    </main>
+    <script src="../lib/Readability.js"></script>
+    <script type="module" src="eval.js"></script>
+  </body>
+</html>

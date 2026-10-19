@@ -13,7 +13,7 @@ const STEPS = [
   },
   {
     title: "It opens the page Google cited.",
-    body: "The checker fetches each cited page and pulls out the readable article text, skipping menus, ads, and scripts.",
+    body: "The extension opens each cited page itself, without your cookies, and pulls out the readable article text, skipping menus, ads, and scripts.",
   },
   {
     title: "It finds the passages that matter.",
@@ -21,7 +21,7 @@ const STEPS = [
   },
   {
     title: "It shows you the receipt.",
-    body: "A model weighs the claim against the best passages. The quote you see is checked word for word against the page, and links straight to it.",
+    body: "Gemini Nano, the AI model built into Chrome, weighs the claim against the best passages on your own computer. The quote you see is checked word for word against the page, and links straight to it.",
   },
 ];
 

@@ -1,35 +1,18 @@
-const DEFAULTS = { apiBase: globalThis.OCX_DEFAULT_API_BASE, autoRun: true };
+import { nanoStatus } from "./lib/judge.js";
+
+const READ_PAGES = { origins: ["https://*/*", "http://*/*"] };
 const LABELS = {
   supported: "Supported",
   not_found: "Not in source",
   contradicted: "Contradicted",
   unverifiable: "Couldn't check",
 };
-
 const $ = (id) => document.getElementById(id);
-
-async function checkServer(base) {
-  const status = $("serverStatus");
-  status.className = "status";
-  status.textContent = "Connecting…";
-  try {
-    const res = await fetch(`${base.replace(/\/+$/, "")}/api/health`, { cache: "no-store" });
-    const body = await res.json();
-    if (!res.ok || !body.ok) throw new Error();
-    status.className = "status ok";
-    status.textContent =
-      body.mode === "model" ? `Connected. Checking with ${body.model}.` : "Connected in lite mode (word matching, no AI model).";
-  } catch {
-    status.className = "status bad";
-    status.textContent = "Couldn't reach a checking server at this address.";
-  }
-}
 
 function renderTally(t) {
   const box = $("tab");
   if (!t || !t.total) return;
   box.replaceChildren();
-  const done = t.total - (t.pending || 0);
   const score = document.createElement("p");
   score.className = "score";
   score.textContent = t.pending ? `Checking ${t.total} sentences…` : `${t.supported} of ${t.total} supported`;
@@ -38,7 +21,7 @@ function renderTally(t) {
   bars.setAttribute("aria-hidden", "true");
   const list = document.createElement("ul");
   list.className = "legend";
-  for (const v of ["supported", "not_found", "contradicted", "unverifiable"]) {
+  for (const v of Object.keys(LABELS)) {
     if (t[v]) {
       const seg = document.createElement("span");
       seg.className = `v-${v}`;
@@ -52,30 +35,34 @@ function renderTally(t) {
     list.append(li);
   }
   box.append(score, bars, list);
-  if (done === 0) bars.remove();
+}
+
+async function renderStatus() {
+  const canRead = await chrome.permissions.contains(READ_PAGES);
+  const model = await nanoStatus(globalThis.LanguageModel);
+  $("readStatus").textContent = canRead ? "Allowed" : "Not allowed yet";
+  $("readStatus").className = canRead ? "ok" : "warn";
+  const modelText = {
+    available: "Ready: Gemini Nano",
+    downloadable: "Not downloaded yet (lite mode for now)",
+    downloading: "Downloading (lite mode for now)",
+    unavailable: "Not supported here (lite mode)",
+    unsupported: "Not supported here (lite mode)",
+  }[model];
+  $("modelStatus").textContent = modelText;
+  $("modelStatus").className = model === "available" ? "ok" : "warn";
+  $("setup").hidden = canRead && model !== "downloadable";
 }
 
 (async () => {
-  const settings = { ...DEFAULTS, ...(await chrome.storage.sync.get(DEFAULTS)) };
-  $("autoRun").checked = settings.autoRun;
-  $("apiBase").value = settings.apiBase;
-
+  const { autoRun } = await chrome.storage.sync.get({ autoRun: true });
+  $("autoRun").checked = autoRun;
   $("autoRun").addEventListener("change", (e) => chrome.storage.sync.set({ autoRun: e.target.checked }));
-  $("serverForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const value = $("apiBase").value.trim().replace(/\/+$/, "");
-    if (!/^https?:\/\//.test(value)) {
-      $("serverStatus").className = "status bad";
-      $("serverStatus").textContent = "Enter an address that starts with https://";
-      return;
-    }
-    await chrome.storage.sync.set({ apiBase: value });
-    checkServer(value);
+  $("setup").addEventListener("click", () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL("setup.html") });
+    window.close();
   });
-
-  $("serverForm").closest("details").addEventListener("toggle", (e) => {
-    if (e.target.open) checkServer($("apiBase").value);
-  });
+  renderStatus();
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab?.id !== undefined) {

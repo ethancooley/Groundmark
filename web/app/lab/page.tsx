@@ -115,8 +115,8 @@ export default function Lab() {
         </section>
 
         <p className="mt-8 text-[14px] text-slate">
-          No verdicts showing? Make sure the extension is installed and enabled, then reload. The extension popup shows
-          which checking server it&rsquo;s using.
+          No verdicts showing? Make sure the extension is installed and that you finished its setup, then reload. The
+          extension popup shows what&rsquo;s left to set up.
         </p>
       </main>
     </div>

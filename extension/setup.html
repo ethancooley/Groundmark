@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Set up Overview Check</title>
+    <link rel="icon" href="icons/icon32.png" />
+    <link rel="stylesheet" href="setup.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="icons/icon128.png" alt="" width="72" height="72" />
+        <h1>Set up Overview Check</h1>
+        <p class="lede">
+          Two quick steps. Everything runs on this computer, so there&rsquo;s no account, no server, and nothing to pay.
+        </p>
+      </header>
+
+      <ol class="steps">
+        <li class="step" id="step-read">
+          <div class="step-head">
+            <span class="num">1</span>
+            <div>
+              <h2>Let it read the pages Google cites</h2>
+              <p>
+                To check a sentence, Overview Check opens the links Google attached to it, the same as clicking them
+                yourself. It only does this on Google search pages, and it opens pages without your cookies, so sites
+                never see your logged-in accounts.
+              </p>
+            </div>
+          </div>
+          <div class="step-action">
+            <button type="button" id="allow">Allow reading cited pages</button>
+            <p class="status" id="read-status" role="status"></p>
+          </div>
+        </li>
+
+        <li class="step" id="step-model">
+          <div class="step-head">
+            <span class="num">2</span>
+            <div>
+              <h2>Turn on the on-device AI</h2>
+              <p>
+                Verdicts come from Gemini Nano, the language model built into Chrome. It runs on your computer, so the
+                sentences you check never leave it. Chrome downloads the model once.
+              </p>
+            </div>
+          </div>
+          <div class="step-action">
+            <button type="button" id="download" hidden>Download the model</button>
+            <div class="progress" id="progress" hidden>
+              <div class="bar"><span id="bar"></span></div>
+              <span id="pct">0%</span>
+            </div>
+            <p class="status" id="model-status" role="status">Checking this computer…</p>
+          </div>
+        </li>
+      </ol>
+
+      <section class="done" id="done" hidden>
+        <h2>You&rsquo;re set.</h2>
+        <p>Search on Google. When an AI Overview appears, each sentence gets a verdict. Hover a badge to see the evidence.</p>
+        <p><a href="https://www.google.com/search?q=how+much+caffeine+is+safe+per+day" target="_blank" rel="noreferrer">Try a search</a></p>
+      </section>
+
+      <details class="req">
+        <summary>What the on-device AI needs</summary>
+        <p>
+          Chrome 138 or later on Windows 10 or 11, macOS 13 or later, Linux, or a Chromebook Plus. At least 22 GB of free
+          disk space, and either a GPU with more than 4 GB of memory or 16 GB of RAM with 4 or more CPU cores. If this
+          computer can&rsquo;t run it, Overview Check still works in lite mode, which matches words and figures instead
+          of reading meaning, and labels every result as a lite check.
+        </p>
+      </details>
+    </main>
+    <script type="module" src="setup.js"></script>
+  </body>
+</html>

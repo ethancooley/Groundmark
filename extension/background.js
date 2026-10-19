@@ -1,93 +1,90 @@
-// Service worker: talks to the checking server on behalf of the page.
-//
-// The extension has no host permissions. It can't read any site except Google
-// search pages, and it only sends the Overview's sentences and the links Google
-// attached to them. Your search query is never sent.
+// Service worker: connects Google pages to the checker running in the
+// offscreen document. Nothing here talks to any server.
 
-importScripts("config.js");
+export const READ_PAGES = { origins: ["https://*/*", "http://*/*"] };
 
-const DEFAULTS = { apiBase: globalThis.OCX_DEFAULT_API_BASE, autoRun: true };
-
-async function getSettings() {
-  const s = await chrome.storage.sync.get(DEFAULTS);
-  return { ...DEFAULTS, ...s, apiBase: String(s.apiBase || DEFAULTS.apiBase).replace(/\/+$/, "") };
+let creating = null;
+async function ensureOffscreen() {
+  const existing = await chrome.runtime.getContexts({ contextTypes: ["OFFSCREEN_DOCUMENT"] });
+  if (existing.length > 0) return;
+  if (!creating) {
+    creating = chrome.offscreen
+      .createDocument({
+        url: "offscreen.html",
+        reasons: ["DOM_PARSER"],
+        justification: "Reads the pages an AI Overview cites and checks its sentences with the on-device model.",
+      })
+      .finally(() => (creating = null));
+  }
+  await creating;
 }
 
-async function streamCheck(claims, port, signal) {
-  const { apiBase } = await getSettings();
-  let res;
-  try {
-    res = await fetch(`${apiBase}/api/check`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ claims }),
-      signal,
-    });
-  } catch {
-    port.postMessage({
-      type: "error",
-      message: `Couldn't reach the checking server at ${apiBase}. Check the server address in the extension's popup.`,
-    });
-    return;
-  }
-
-  if (!res.ok || !res.body) {
-    let message = `The checking server returned an error (${res.status}).`;
-    try {
-      const body = await res.json();
-      if (body?.error) message = body.error;
-    } catch {}
-    port.postMessage({ type: "error", message });
-    return;
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let nl;
-    while ((nl = buffer.indexOf("\n")) >= 0) {
-      const line = buffer.slice(0, nl).trim();
-      buffer = buffer.slice(nl + 1);
-      if (!line) continue;
-      try {
-        port.postMessage(JSON.parse(line));
-      } catch {}
-    }
-  }
-}
+const jobs = new Map(); // jobId -> port
 
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== "ocx") return;
-  const controller = new AbortController();
-  port.onDisconnect.addListener(() => controller.abort());
+  const mine = new Set();
+  port.onDisconnect.addListener(() => {
+    for (const id of mine) jobs.delete(id);
+  });
   port.onMessage.addListener(async (msg) => {
     if (msg?.type !== "check" || !Array.isArray(msg.claims)) return;
-    try {
-      await streamCheck(msg.claims, port, controller.signal);
-    } catch (e) {
-      if (!controller.signal.aborted) {
-        try {
-          port.postMessage({ type: "error", message: "The connection to the checking server dropped. Try again." });
-        } catch {}
-      }
+    if (!(await chrome.permissions.contains(READ_PAGES))) {
+      port.postMessage({ type: "setup", reason: "permission" });
+      return;
     }
+    try {
+      await ensureOffscreen();
+    } catch (e) {
+      console.error(e);
+      port.postMessage({ type: "error", message: "Overview Check couldn't start its checker. Reload the page to try again." });
+      return;
+    }
+    const jobId = crypto.randomUUID();
+    jobs.set(jobId, port);
+    mine.add(jobId);
+    chrome.runtime.sendMessage({ target: "offscreen", type: "check", jobId, claims: msg.claims }).catch(() => {
+      port.postMessage({ type: "error", message: "Overview Check couldn't reach its checker. Reload the page to try again." });
+    });
   });
 });
 
-// The page reports its tally so the popup can show it.
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg?.target === "background") {
+    const port = jobs.get(msg.jobId);
+    if (port) {
+      try {
+        port.postMessage(msg.event);
+      } catch {
+        jobs.delete(msg.jobId);
+      }
+      if (msg.event.type === "done" || msg.event.type === "error") jobs.delete(msg.jobId);
+    }
+    return false;
+  }
   if (msg?.type === "tally" && sender.tab?.id !== undefined) {
     chrome.storage.session.set({ [`tab:${sender.tab.id}`]: msg.tally });
+    return false;
+  }
+  if (msg?.type === "open_setup") {
+    chrome.tabs.create({ url: chrome.runtime.getURL("setup.html") });
+    return false;
   }
   if (msg?.type === "settings") {
-    getSettings().then(sendResponse);
+    chrome.storage.sync.get({ autoRun: true }).then(sendResponse);
     return true;
   }
   return false;
+});
+
+// Once the user allows reading pages, tell open Google tabs to try again.
+chrome.permissions.onAdded.addListener(async () => {
+  const tabs = await chrome.tabs.query({});
+  for (const t of tabs) if (t.id !== undefined) chrome.tabs.sendMessage(t.id, { type: "ocx_retry" }).catch(() => {});
+});
+
+chrome.runtime.onInstalled.addListener(({ reason }) => {
+  if (reason === "install") chrome.tabs.create({ url: chrome.runtime.getURL("setup.html") });
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => chrome.storage.session.remove(`tab:${tabId}`));

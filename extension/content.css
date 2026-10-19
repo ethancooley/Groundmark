@@ -70,6 +70,7 @@
   background: #fff; color: #0f2240; border: 1px solid rgba(15, 34, 64, 0.1);
 }
 .ocx-bar[data-theme="dark"] .ocx-chip { background: rgba(255, 255, 255, 0.06); color: #e8edf5; border-color: rgba(255, 255, 255, 0.12); }
+.ocx-lite { padding: 2px 8px; background: transparent; border-style: dashed; font-weight: 600; }
 .ocx-chip svg { width: 14px; height: 14px; border-radius: 50%; color: #fff; background: #8a94a6; padding: 1px; }
 .ocx-chip[data-verdict="supported"] svg { background: #12a150; }
 .ocx-chip[data-verdict="not_found"] svg { background: #e8590c; }

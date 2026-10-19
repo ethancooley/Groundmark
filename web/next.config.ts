@@ -1,12 +1,13 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
-  // jsdom loads files from disk at runtime, so keep it out of the bundle.
-  serverExternalPackages: ["jsdom", "@mozilla/readability"],
   partialPrefetching: true,
   turbopack: {
+    // The site imports the extension's checker from ../extension.
+    root: path.join(__dirname, ".."),
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],

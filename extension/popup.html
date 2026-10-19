@@ -18,32 +18,29 @@
       <p class="empty">Search on Google. When an AI Overview appears, each sentence gets a verdict.</p>
     </section>
 
+    <section class="status-list" aria-label="Setup">
+      <div class="row">
+        <span><strong>Reading cited pages</strong><small id="readStatus">Checking…</small></span>
+      </div>
+      <div class="row">
+        <span><strong>On-device AI</strong><small id="modelStatus">Checking…</small></span>
+      </div>
+      <button type="button" id="setup" hidden>Finish setup</button>
+    </section>
+
     <section class="settings">
-      <label class="row">
+      <label class="row toggle">
         <span>
           <strong>Check automatically</strong>
           <small>Off: a button appears on each Overview instead.</small>
         </span>
         <input type="checkbox" id="autoRun" role="switch" />
       </label>
-
-      <details>
-        <summary>Checking server</summary>
-        <form id="serverForm">
-          <label for="apiBase">Server address</label>
-          <div class="field">
-            <input id="apiBase" type="url" required spellcheck="false" />
-            <button type="submit">Save</button>
-          </div>
-          <p id="serverStatus" class="status" role="status"></p>
-        </form>
-      </details>
     </section>
 
     <footer>
-      <p>Only the Overview's sentences and the links Google attached are sent for checking. Your search query is not.</p>
+      <p>Everything runs on this computer. Overview Check has no server and sends nothing anywhere except to open the pages Google cited.</p>
     </footer>
-    <script src="config.js"></script>
-    <script src="popup.js"></script>
+    <script type="module" src="popup.js"></script>
   </body>
 </html>

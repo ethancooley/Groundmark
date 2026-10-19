@@ -72,13 +72,13 @@ export function Verdicts() {
 }
 
 const SENT = [
-  "Each sentence of the AI Overview",
-  "The links Google attached to each sentence",
+  "A normal request to open each page Google cited, the same as clicking the link",
+  "Sent without your cookies, so sites never see your logged-in accounts",
 ];
 const KEPT = [
-  "Your search query",
+  "Your search query and the AI Overview's text",
+  "Every verdict, quote, and explanation",
   "Your Google account, cookies, and history",
-  "Anything on pages other than Google search results",
 ];
 
 const PRACTICES = [
@@ -91,12 +91,20 @@ const PRACTICES = [
     body: "Web pages can hide instructions meant for AI. Source text is passed to the model as quoted data with an explicit rule to ignore anything inside it that reads like a command.",
   },
   {
-    title: "No access it doesn't need.",
-    body: "The extension has no host permissions. It runs only on Google search pages, and the server fetches sources itself through guards that refuse private networks.",
+    title: "No server, no account, no bill.",
+    body: "Checking runs on Gemini Nano, the model built into Chrome, on your own computer. There's nothing to sign up for, and nobody, including us, sees what you search or what gets checked.",
+  },
+  {
+    title: "Access only when you allow it.",
+    body: "Reading cited pages needs permission to open websites, so the extension asks once, with an explanation, and still runs only on Google search pages. It never opens local-network addresses.",
   },
   {
     title: "Honest about uncertainty.",
-    body: "\"Not found\" is not \"false.\" PDFs, paywalls, and blocked pages get \"Couldn't check,\" never a guess. Every verdict shows a confidence and which links it used.",
+    body: "\"Not found\" is not \"false.\" PDFs, paywalls, and blocked pages get \"Couldn't check,\" never a guess. Confidence comes from checks on the evidence, not from the model grading itself.",
+  },
+  {
+    title: "Works on more computers, honestly labeled.",
+    body: "Where Chrome's on-device model isn't available, a lite mode matches words and figures instead. It never claims a contradiction, and every lite result says so.",
   },
 ];
 
@@ -114,7 +122,7 @@ export function Responsible() {
 
         <div className="mt-16 grid gap-px overflow-hidden rounded-[24px] border border-line bg-line md:grid-cols-2">
           <div className="bg-surface p-8 sm:p-10">
-            <h3 className="headline text-[24px]">Sent for checking</h3>
+            <h3 className="headline text-[24px]">The only thing that goes out</h3>
             <ul className="mt-5 space-y-3 text-[17px]">
               {SENT.map((s) => (
                 <li key={s} className="flex gap-3">
@@ -125,7 +133,7 @@ export function Responsible() {
             </ul>
           </div>
           <div className="bg-surface p-8 sm:p-10">
-            <h3 className="headline text-[24px]">Never leaves your browser</h3>
+            <h3 className="headline text-[24px]">Stays on your computer</h3>
             <ul className="mt-5 space-y-3 text-[17px]">
               {KEPT.map((s) => (
                 <li key={s} className="flex gap-3">
@@ -160,7 +168,7 @@ export function Install() {
     { title: "Download the extension", body: "Get the zip file and unzip it somewhere you'll keep it." },
     { title: "Open Chrome's extension page", body: "Go to chrome://extensions and turn on Developer mode in the top right." },
     { title: "Load it", body: "Click Load unpacked and choose the unzipped Overview Check folder." },
-    { title: "Search", body: "Search anything on Google. When an AI Overview appears, each sentence gets a verdict." },
+    { title: "Finish setup", body: "Allow it to read cited pages and download Chrome's on-device AI. Then search on Google as usual." },
   ];
   return (
     <section id="install" aria-labelledby="install-title" className="wrap py-32 sm:py-44">
@@ -172,7 +180,7 @@ export function Install() {
           Read past the summary.
         </h2>
         <p className="lede mx-auto mt-6 max-w-[40ch]">
-          Free and open source. Works in Chrome and other Chromium browsers like Edge, Arc, and Brave.
+          Free and open source, with nothing to sign up for. Requires Chrome 138 or later.
         </p>
         <div className="mt-10 flex flex-wrap justify-center gap-3">
           <a
@@ -210,10 +218,10 @@ export function Install() {
 
 const LIMITS = [
   "It checks whether the cited page supports a sentence, not whether the sentence is true. A sentence can be correct and still not be backed by its citation.",
-  "Verdicts come from a language model reading short passages. It can miss context elsewhere on a page, misread tables, or be wrong. Treat a verdict as a reason to look, not a final answer.",
+  "Verdicts come from a small on-device model reading short passages. It is less accurate than large cloud models, can miss context elsewhere on a page, and can be wrong. Treat a verdict as a reason to look, not a final answer.",
+  "The on-device model needs a recent computer: about 22 GB of free disk space and either a GPU with more than 4 GB of memory or 16 GB of RAM. Other computers get lite mode, which is much less capable.",
   "It reads English Overviews on Google search only, and can't yet read PDFs, videos, or pages behind logins or paywalls.",
   "Google changes its page layout often. When the layout shifts, the extension may miss sentences or attach them to the wrong links until it's updated.",
-  "The server sees the sentences and links it checks. Those aren't stored, but you are trusting the server you point the extension at.",
 ];
 
 export function Limitations() {
@@ -260,8 +268,8 @@ export function Footer() {
           <a href="/lab" className="hover:text-ink">
             Test page
           </a>
-          <a href="#responsible" className="hover:text-ink">
-            Privacy
+          <a href="/privacy" className="hover:text-ink">
+            Privacy policy
           </a>
         </div>
       </div>
