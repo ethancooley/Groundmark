@@ -112,7 +112,7 @@ $("run").addEventListener("click", async () => {
     return;
   }
   $("run").disabled = true;
-  const checker = createChecker({ fetch: (...a) => fetch(...a), DOMParser, Readability: globalThis.Readability, LanguageModel: globalThis.LanguageModel });
+  const checker = createChecker({ fetch: (...a) => fetch(...a), DOMParser, LanguageModel: globalThis.LanguageModel });
   const results = {};
   let mode = "heuristic";
   const started = performance.now();

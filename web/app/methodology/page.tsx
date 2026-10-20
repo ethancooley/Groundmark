@@ -115,9 +115,13 @@ export default function Methodology() {
           both before the request and after any redirect. Pages are capped at about {mb} MB and {seconds} seconds.
         </p>
         <p className="mt-4">
-          The readable article text is extracted with Mozilla Readability, the same library behind Firefox Reader
-          View, after removing scripts, styles, and embedded frames. PDFs, images, and pages with no readable text are
-          marked &ldquo;Couldn&rsquo;t check&rdquo; instead of being guessed at.
+          Groundmark reads the whole page, not just what looks like the main article. Event pages, product pages,
+          and FAQs often keep the cited fact in a side section that article extractors throw away, so only page
+          furniture is removed: scripts, menus, buttons, and cookie banners. Descriptive image text, the page&rsquo;s
+          summary, and its structured data (such as an event&rsquo;s date and place) are read too. Dates and times are
+          compared in one shape, so &ldquo;November 13th, 10am&rdquo; on the page matches &ldquo;November 13, 10:00
+          AM&rdquo; in the Overview. PDFs, images, and pages with no readable text are marked &ldquo;Couldn&rsquo;t
+          check&rdquo; instead of being guessed at.
         </p>
 
         <H2 id="passages">3. Choosing passages</H2>

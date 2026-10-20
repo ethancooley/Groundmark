@@ -13,7 +13,7 @@ const STEPS = [
   },
   {
     title: "It opens the page Google cited.",
-    body: "The extension opens each cited page itself, without your cookies, and pulls out the readable article text, skipping menus, ads, and scripts.",
+    body: "The extension opens each cited page itself, without your cookies, and reads all of its text, skipping menus, buttons, and scripts.",
   },
   {
     title: "It finds the passages that matter.",

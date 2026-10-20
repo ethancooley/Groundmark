@@ -248,6 +248,18 @@
     return owned;
   }
 
+  /**
+   * Whether a sentence states something checkable. Questions are skipped: an
+   * Overview often ends with an offer like "Would you like information on
+   * parking or hotels?", whose links start new searches rather than cite sources.
+   */
+  function isClaim(text) {
+    if (text.split(" ").length < 5 || /:$/.test(text) || !/[a-z]{3}/i.test(text)) return false;
+    if (/\?["')\]]*$/.test(text)) return false;
+    if (/^(would you like|do you want|want me to|let me know|i can (also )?(help|tell|show|find))\b/i.test(text)) return false;
+    return true;
+  }
+
   function extractClaims(root) {
     const overviewSources = linksIn(sourceScope(root)).slice(0, MAX_SOURCES);
     const claims = [];
@@ -270,7 +282,7 @@
 
       sentences.forEach((s, i) => {
         const { text, range } = s;
-        if (text.split(" ").length < 5 || /:$/.test(text) || !/[a-z]{3}/i.test(text)) return;
+        if (!isClaim(text)) return;
         if (state.checkedTexts.has(text)) return;
         // Most specific first: links right after this sentence, then the block's, then the Overview's.
         let sources = perSentence[i];

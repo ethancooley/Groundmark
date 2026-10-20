@@ -82,9 +82,21 @@ const NUMBER_WORDS = {
   half: "0.5", twice: "2", double: "2", triple: "3",
 };
 
+/**
+ * Puts dates and times into one shape for matching only (quotes are always
+ * checked against the original text): "13th" -> "13", "10am" -> "10 am",
+ * "10:00 AM" -> "10 am", so a page and a summary that write them differently still match.
+ */
+function canonNumbers(s) {
+  return normalize(s)
+    .replace(/\b(\d+)(st|nd|rd|th)\b/gi, "$1")
+    .replace(/\b(\d{1,2}):00\b/g, "$1")
+    .replace(/\b(\d{1,2})\s*([ap])\.?m\.?(?=\W|$)/gi, "$1 $2m");
+}
+
 /** Content tokens: lowercase, no stopwords, lightly stemmed. Numbers kept intact; number words become digits. */
 export function tokens(text) {
-  const words = normalize(text).toLowerCase().match(/[a-z0-9]+(?:[.,][0-9]+)*/g);
+  const words = canonNumbers(text).toLowerCase().match(/[a-z0-9]+(?:[.,][0-9]+)*/g);
   if (!words) return [];
   return words
     .map((w) => NUMBER_WORDS[w] || w)
@@ -98,7 +110,7 @@ export function tokens(text) {
  */
 export function numbersIn(text) {
   const out = [];
-  for (const m of normalize(text).toLowerCase().matchAll(/\d+(?:[.,]\d+)*|[a-z]+/g)) {
+  for (const m of canonNumbers(text).toLowerCase().matchAll(/\d+(?:[.,]\d+)*|[a-z]+/g)) {
     const t = m[0];
     if (/^\d/.test(t)) out.push(t.replace(/,/g, ""));
     else if (NUMBER_WORDS[t] && t !== "one" && t !== "half" && t !== "double" && t !== "triple" && t !== "twice") out.push(NUMBER_WORDS[t]);

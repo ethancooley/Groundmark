@@ -5,7 +5,6 @@ import { createChecker } from "./lib/checker.js";
 const checker = createChecker({
   fetch: (...args) => fetch(...args),
   DOMParser,
-  Readability: globalThis.Readability,
   LanguageModel: globalThis.LanguageModel,
 });
 

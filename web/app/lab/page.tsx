@@ -101,6 +101,12 @@ export default function Lab() {
                 </li>
               </ul>
               <p>Caffeine is a stimulant that is naturally found in coffee, tea, and cacao beans.</p>
+              <p>
+                Would you like information on{" "}
+                <a href="https://www.google.com/search?q=caffeine+in+green+tea" className="underline">caffeine in green tea</a>,{" "}
+                <a href="https://www.google.com/search?q=caffeine+withdrawal" className="underline">caffeine withdrawal</a>, or{" "}
+                <a href="https://www.google.com/search?q=decaf+coffee" className="underline">decaf coffee</a>?
+              </p>
             </div>
 
             <aside aria-label="Sources" className="flex flex-col gap-2">

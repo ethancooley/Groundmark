@@ -2,7 +2,7 @@ import { numbersIn, splitSentences, tokens } from "./text.js";
 
 const WINDOW = 3;
 const STRIDE = 2;
-const MAX_PASSAGES_PER_DOC = 600;
+const MAX_PASSAGES_PER_DOC = 1500;
 const MAX_PASSAGE_CHARS = 700;
 
 /**
