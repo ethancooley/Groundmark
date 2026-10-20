@@ -36,6 +36,9 @@ export function Nav() {
           <a href="#responsible" className="hover:text-ink">
             Privacy
           </a>
+          <a href="/methodology" className="hover:text-ink">
+            Methodology
+          </a>
         </div>
         <a
           href="#install"

@@ -70,3 +70,22 @@ button[hidden] { display: none; }
 .done a { font-weight: 600; color: var(--link); }
 .req { margin-top: 32px; color: var(--slate); font-size: 15px; }
 .req summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+
+button.secondary { color: var(--ink); background: transparent; border: 1px solid var(--line); }
+button.secondary[hidden] { display: none; }
+button.link {
+  padding: 0; border: 0; background: none; color: var(--link); font-weight: 600; font-size: inherit;
+  border-radius: 4px; cursor: pointer;
+}
+button.link:hover { text-decoration: underline; }
+button.link[hidden], .hint[hidden] { display: none; }
+.facts { margin: 22px 0 0; padding: 16px 0 0; border-top: 1px solid var(--line); display: grid; gap: 12px; }
+.facts div { display: grid; grid-template-columns: 96px 1fr; gap: 12px; }
+.facts dt { font-weight: 600; font-size: 15px; }
+.facts dd { margin: 0; font-size: 15px; color: var(--ink-soft); }
+.facts code, .hint code {
+  font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all;
+  padding: 1px 6px; border-radius: 6px; background: var(--paper); border: 1px solid var(--line);
+}
+.hint { display: block; margin-top: 4px; color: var(--slate); }
+@media (max-width: 560px) { .facts div { grid-template-columns: 1fr; gap: 2px; } }

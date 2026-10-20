@@ -5,7 +5,6 @@ export const SITE = {
     "A Chrome extension that checks each sentence of a Google AI Overview against the pages it cites, and shows you the evidence.",
   author: "Ethan Cooley",
   authorUrl: "https://ethancooley.com",
-  course: "Responsible AI, Duke University AI for Product Innovation (AIPI)",
   github: "https://github.com/ethancooley/groundmark",
   download: "/groundmark-extension.zip",
   chromeStore: "https://chromewebstore.google.com/detail/mhfdggfjdiphhboegcnlkaialmmhjodl",

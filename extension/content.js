@@ -552,6 +552,36 @@
       const level = r.confidence >= 0.75 ? "high" : r.confidence >= 0.5 ? "medium" : "low";
       meta.textContent = r.verdict === "unverifiable" ? scope : `${scope} ${engine} Confidence: ${level}.`;
       card.append(meta);
+      if (r.trace) {
+        const inspect = el(
+          "button",
+          "inspect",
+          r.trace.mode === "model" ? "See what the model saw" : "See how this was checked",
+        );
+        inspect.type = "button";
+        inspect.addEventListener("click", (e) => {
+          e.stopPropagation();
+          try {
+            chrome.runtime
+              .sendMessage({
+                type: "inspect",
+                payload: {
+                  claim: claim.text,
+                  scope: claim.scope,
+                  verdict: r.verdict,
+                  partial: r.partial,
+                  explanation: r.explanation,
+                  evidence: r.evidence || null,
+                  trace: r.trace,
+                },
+              })
+              .catch(() => {});
+          } catch {
+            // The extension was reloaded; this page's copy of the script is orphaned.
+          }
+        });
+        card.append(inspect);
+      }
     }
 
     // Position near the badge.
@@ -793,6 +823,13 @@
     .open:hover { text-decoration: underline; }
     .open:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
     .meta { margin: 0; padding-top: 8px; border-top: 1px solid rgba(15,34,64,0.1); font-size: 12px; opacity: 0.7; }
+    .inspect {
+      all: unset; display: inline-block; margin-top: 8px; font-size: 12.5px; font-weight: 600;
+      color: #1a56db; cursor: pointer; border-radius: 4px;
+    }
+    :host([data-theme="dark"]) .inspect { color: #8ab4f8; }
+    .inspect:hover { text-decoration: underline; }
+    .inspect:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
     :host([data-theme="dark"]) .meta { border-color: rgba(255,255,255,0.12); }
   `;
 })();

@@ -117,7 +117,10 @@ export function Responsible() {
         </h2>
         <p className="lede mt-6 max-w-[46ch]">
           A tool that grades AI has to hold itself to the same standard. These are the design choices that make
-          Groundmark trustworthy, and the places where it isn&rsquo;t.
+          Groundmark trustworthy, and the places where it isn&rsquo;t.{" "}
+          <a href="/methodology" className="text-link hover:underline">
+            Read the full methodology, including the exact prompt.
+          </a>
         </p>
 
         <div className="mt-16 grid gap-px overflow-hidden rounded-[24px] border border-line bg-line md:grid-cols-2">
@@ -274,21 +277,24 @@ export function Footer() {
             Built by{" "}
             <a href={SITE.authorUrl} className="text-ink underline-offset-4 hover:underline">
               {SITE.author}
-            </a>{" "}
-            for {SITE.course}. Not affiliated with Google.
+            </a>
+            . Not affiliated with Google.
           </p>
           <p className="mt-2">
             The name comes from grounding, the AI term for whether an answer is actually backed by its sources.
           </p>
         </div>
         <div className="flex gap-8">
-          <a href={SITE.github} className="hover:text-ink">
+          <a href={SITE.github} target="_blank" rel="noreferrer" className="hover:text-ink">
             Source code
           </a>
-          <a href="/lab" className="hover:text-ink">
+          <a href="/lab" target="_blank" rel="noreferrer" className="hover:text-ink">
             Test page
           </a>
-          <a href="/privacy" className="hover:text-ink">
+          <a href="/methodology" className="hover:text-ink">
+            Methodology
+          </a>
+          <a href="/privacy" target="_blank" rel="noreferrer" className="hover:text-ink">
             Privacy policy
           </a>
         </div>

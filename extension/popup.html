@@ -19,17 +19,18 @@
     </section>
 
     <section class="status-list" aria-label="Setup">
-      <div class="row">
+      <button type="button" class="status-row" data-section="read">
         <span><strong>Reading cited pages</strong><small id="readStatus">Checking…</small></span>
-      </div>
-      <div class="row">
+        <span class="chev" aria-hidden="true">›</span>
+      </button>
+      <button type="button" class="status-row" data-section="model">
         <span><strong>On-device AI</strong><small id="modelStatus">Checking…</small></span>
-      </div>
-      <button type="button" id="setup" hidden>Finish setup</button>
+        <span class="chev" aria-hidden="true">›</span>
+      </button>
     </section>
 
     <section class="settings">
-      <label class="row toggle">
+      <label class="toggle">
         <span>
           <strong>Check automatically</strong>
           <small>Off: a button appears on each Overview instead.</small>

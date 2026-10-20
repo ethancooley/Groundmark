@@ -168,6 +168,7 @@ export function createChecker(env) {
       explanation,
       sources: claimDocs.map((d) => ({ url: d.url, status: d.status, title: d.title })),
       mode,
+      trace: { mode, unreadable: true, sources: claimDocs.map((d) => ({ url: d.url, status: d.status, title: d.title, detail: d.detail })) },
     };
   }
 
@@ -231,14 +232,32 @@ export function createChecker(env) {
               judgment = judgeHeuristic(claim.text, candidates);
             }
 
-            const passage = candidates.find((p) => p.id === judgment.passageId) || candidates[0];
+            const matched = candidates.find((p) => p.id === judgment.passageId);
+            const passage = matched || candidates[0];
             const doc = readable.find((d) => d.url === passage.sourceUrl);
             const { quote, verbatim } = verifyQuote(judgment.quote, passage.text, claim.text);
+            const overlap = coverage(claim.text, passage.text);
+            const confidence = confidenceFor(usedMode, judgment.verdict, { verbatim, overlap });
+            const titleOf = (url) => readable.find((d) => d.url === url)?.title;
+            // Everything that went into this verdict, shown on the inspector page.
+            const trace = {
+              mode: usedMode,
+              fellBack: usedMode !== mode,
+              candidates: candidates.map((p) => ({ id: p.id, text: p.text, sourceUrl: p.sourceUrl, sourceTitle: titleOf(p.sourceUrl) })),
+              chosenPassageId: passage.id,
+              modelPickedPassage: usedMode === "model" ? Boolean(matched) : null,
+              modelQuote: usedMode === "model" ? judgment.quote : null,
+              quoteVerbatim: verbatim,
+              overlap: Math.round(overlap * 100) / 100,
+              confidence,
+              sources: claimDocs.map((d) => ({ url: d.url, status: d.status, title: d.title })),
+              ...(judgment.trace || {}),
+            };
             result = {
               id: claim.id,
               claim: claim.text,
               verdict: judgment.verdict,
-              confidence: confidenceFor(usedMode, judgment.verdict, { verbatim, overlap: coverage(claim.text, passage.text) }),
+              confidence,
               partial: judgment.partial,
               explanation: judgment.explanation,
               evidence: {
@@ -250,6 +269,7 @@ export function createChecker(env) {
               },
               sources: claimDocs.map((d) => ({ url: d.url, status: d.status, title: d.title })),
               mode: usedMode,
+              trace,
             };
             if (usedMode === mode) results.set(key, result);
           }

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Groundmark",
   "short_name": "Groundmark",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Checks each sentence of a Google AI Overview against the pages it cites, on your own computer, and shows you the evidence.",
   "minimum_chrome_version": "138",
   "icons": {

@@ -11,7 +11,7 @@ export const LANGUAGE_OPTIONS = {
   expectedOutputs: [{ type: "text", languages: ["en"] }],
 };
 
-const SYSTEM = `You check Google AI Overviews. You get one sentence from an Overview and passages from the web pages Google cited for it. Decide whether those passages back up the sentence.
+export const SYSTEM = `You check Google AI Overviews. You get one sentence from an Overview and passages from the web pages Google cited for it. Decide whether those passages back up the sentence.
 
 Judge only what the passages say, not what you know.
 
@@ -75,7 +75,15 @@ export async function nanoStatus(LM) {
   }
 }
 
-function formatPrompt(claim, passages) {
+/** The worked examples every session starts with, in the order the model sees them. */
+export const EXAMPLES = [
+  { role: "user", content: EXAMPLE_USER },
+  { role: "assistant", content: EXAMPLE_ASSISTANT },
+  { role: "user", content: EXAMPLE_USER_2 },
+  { role: "assistant", content: EXAMPLE_ASSISTANT_2 },
+];
+
+export function formatPrompt(claim, passages) {
   const lines = passages.map((p) => `[${p.id}] ${p.text.replace(/\s+/g, " ")}`);
   return `Sentence: ${claim}\n\nPassages:\n${lines.join("\n")}`;
 }
@@ -87,41 +95,39 @@ function formatPrompt(claim, passages) {
 export async function createNanoJudge(LM, { monitor, signal } = {}) {
   const base = await LM.create({
     ...LANGUAGE_OPTIONS,
-    initialPrompts: [
-      { role: "system", content: SYSTEM },
-      { role: "user", content: EXAMPLE_USER },
-      { role: "assistant", content: EXAMPLE_ASSISTANT },
-      { role: "user", content: EXAMPLE_USER_2 },
-      { role: "assistant", content: EXAMPLE_ASSISTANT_2 },
-    ],
+    initialPrompts: [{ role: "system", content: SYSTEM }, ...EXAMPLES],
     monitor,
     signal,
   });
 
   async function ask(claim, passages) {
     const session = await base.clone();
+    const prompt = formatPrompt(claim, passages);
     try {
-      const raw = await session.prompt(formatPrompt(claim, passages), { responseConstraint: SCHEMA });
-      return JSON.parse(raw);
+      const raw = await session.prompt(prompt, { responseConstraint: SCHEMA });
+      return { prompt, raw, out: JSON.parse(raw), passageIds: passages.map((p) => p.id) };
     } finally {
       session.destroy();
     }
   }
 
   return {
-    /** @returns {Promise<Judgment>} */
+    /** @returns {Promise<Judgment & { trace: object }>} */
     async judge(claim, passages) {
-      let out;
+      let asked;
+      let retried = false;
       try {
-        out = await ask(claim, passages);
+        asked = await ask(claim, passages);
       } catch (e) {
         // Too long for the model's context: retry with the strongest passages only.
         if (e && (e.name === "QuotaExceededError" || /quota|context/i.test(String(e.message))) && passages.length > 2) {
-          out = await ask(claim, passages.slice(0, 2));
+          asked = await ask(claim, passages.slice(0, 2));
+          retried = true;
         } else {
           throw e;
         }
       }
+      const out = asked.out;
       const verdict = ["supported", "not_found", "contradicted"].includes(out.verdict) ? out.verdict : "not_found";
       return {
         verdict,
@@ -129,6 +135,8 @@ export async function createNanoJudge(LM, { monitor, signal } = {}) {
         passageId: typeof out.passage === "string" ? out.passage.replace(/[[\]\s]/g, "") : null,
         quote: String(out.quote || ""),
         explanation: String(out.explanation || "").slice(0, 300),
+        // Exactly what this sentence's check sent and got back, for the inspector page.
+        trace: { prompt: asked.prompt, raw: asked.raw, sentPassageIds: asked.passageIds, retried },
       };
     },
     destroy() {
@@ -162,6 +170,11 @@ export function judgeHeuristic(claim, passages) {
     passageId: best ? best.id : null,
     quote: "",
     coverage: bestCov,
+    trace: {
+      rule: "Supported only when at least 70% of the sentence's key words appear in one passage and every figure in the sentence appears there too.",
+      claimNumbers: claimNums,
+      numbersMatched: numsOk,
+    },
     explanation: supported
       ? "The cited page contains this sentence's key terms and figures."
       : best

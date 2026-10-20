@@ -66,6 +66,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     chrome.storage.session.set({ [`tab:${sender.tab.id}`]: msg.tally });
     return false;
   }
+  if (msg?.type === "inspect" && msg.payload) {
+    openInspector(msg.payload);
+    return false;
+  }
   if (msg?.type === "open_setup") {
     chrome.tabs.create({ url: chrome.runtime.getURL("setup.html") });
     return false;
@@ -86,5 +90,16 @@ chrome.permissions.onAdded.addListener(async () => {
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason === "install") chrome.tabs.create({ url: chrome.runtime.getURL("setup.html") });
 });
+
+// Inspector data lives in session storage: memory only, cleared when Chrome closes.
+const MAX_INSPECTIONS = 30;
+async function openInspector(payload) {
+  const key = `inspect:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const all = await chrome.storage.session.get(null);
+  const old = Object.keys(all).filter((k) => k.startsWith("inspect:")).sort();
+  if (old.length >= MAX_INSPECTIONS) await chrome.storage.session.remove(old.slice(0, old.length - MAX_INSPECTIONS + 1));
+  await chrome.storage.session.set({ [key]: payload });
+  chrome.tabs.create({ url: chrome.runtime.getURL(`inspector.html#${encodeURIComponent(key)}`) });
+}
 
 chrome.tabs.onRemoved.addListener((tabId) => chrome.storage.session.remove(`tab:${tabId}`));

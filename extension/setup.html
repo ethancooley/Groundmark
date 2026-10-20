@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Set up Groundmark</title>
+    <title>Groundmark settings</title>
     <link rel="icon" href="icons/icon32.png" />
     <link rel="stylesheet" href="setup.css" />
   </head>
@@ -11,18 +11,18 @@
     <main>
       <header>
         <img src="icons/icon128.png" alt="" width="72" height="72" />
-        <h1>Set up Groundmark</h1>
-        <p class="lede">
+        <h1 id="title">Set up Groundmark</h1>
+        <p class="lede" id="lede">
           Two quick steps. Everything runs on this computer, so there&rsquo;s no account, no server, and nothing to pay.
         </p>
       </header>
 
       <ol class="steps">
-        <li class="step" id="step-read">
+        <li class="step" id="read">
           <div class="step-head">
             <span class="num">1</span>
             <div>
-              <h2>Let it read the pages Google cites</h2>
+              <h2>Reading the pages Google cites</h2>
               <p>
                 To check a sentence, Groundmark opens the links Google attached to it, the same as clicking them
                 yourself. It only does this on Google search pages, and it opens pages without your cookies, so sites
@@ -32,18 +32,20 @@
           </div>
           <div class="step-action">
             <button type="button" id="allow">Allow reading cited pages</button>
+            <button type="button" id="revoke" class="secondary" hidden>Stop reading cited pages</button>
             <p class="status" id="read-status" role="status"></p>
           </div>
         </li>
 
-        <li class="step" id="step-model">
+        <li class="step" id="model">
           <div class="step-head">
             <span class="num">2</span>
             <div>
-              <h2>Turn on the on-device AI</h2>
+              <h2>On-device AI</h2>
               <p>
                 Verdicts come from Gemini Nano, the language model built into Chrome. It runs on your computer, so the
-                sentences you check never leave it. Chrome downloads the model once.
+                sentences you check never leave it. Chrome downloads and updates the model itself, and every site or
+                extension that uses Chrome&rsquo;s built-in AI shares the same copy.
               </p>
             </div>
           </div>
@@ -54,6 +56,32 @@
               <span id="pct">0%</span>
             </div>
             <p class="status" id="model-status" role="status">Checking this computer…</p>
+
+            <dl class="facts" id="facts">
+              <div>
+                <dt>Model</dt>
+                <dd>Gemini Nano, built into Chrome. It&rsquo;s the only model Chrome offers extensions, so there&rsquo;s nothing to choose.</dd>
+              </div>
+              <div>
+                <dt>Size</dt>
+                <dd>About 4 GB on disk. Chrome shows the exact size and version on its on-device AI page.</dd>
+              </div>
+              <div>
+                <dt>Stored in</dt>
+                <dd><code id="model-path">Chrome&rsquo;s profile folder, in OptGuideOnDeviceModel</code></dd>
+              </div>
+              <div>
+                <dt>Details</dt>
+                <dd>
+                  <button type="button" class="link" id="internals">Open Chrome&rsquo;s on-device AI page</button>
+                  <span class="hint" id="internals-hint" hidden>
+                    Chrome blocked opening it from here. Paste <code>chrome://on-device-internals</code> into the address
+                    bar.
+                    <button type="button" class="link" id="copy">Copy</button>
+                  </span>
+                </dd>
+              </div>
+            </dl>
           </div>
         </li>
       </ol>
@@ -68,9 +96,10 @@
         <summary>What the on-device AI needs</summary>
         <p>
           Chrome 138 or later on Windows 10 or 11, macOS 13 or later, Linux, or a Chromebook Plus. At least 22 GB of free
-          disk space, and either a GPU with more than 4 GB of memory or 16 GB of RAM with 4 or more CPU cores. If this
-          computer can&rsquo;t run it, Groundmark still works in lite mode, which matches words and figures instead
-          of reading meaning, and labels every result as a lite check.
+          disk space, and either a GPU with more than 4 GB of memory or 16 GB of RAM with 4 or more CPU cores. Chrome
+          removes the model if free space drops below about 10 GB. If this computer can&rsquo;t run it, Groundmark still
+          works in lite mode, which matches words and figures instead of reading meaning, and labels every result as a
+          lite check.
         </p>
       </details>
     </main>

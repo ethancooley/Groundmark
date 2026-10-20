@@ -44,24 +44,26 @@ async function renderStatus() {
   $("readStatus").className = canRead ? "ok" : "warn";
   const modelText = {
     available: "Ready: Gemini Nano",
-    downloadable: "Not downloaded yet (lite mode for now)",
-    downloading: "Downloading (lite mode for now)",
-    unavailable: "Not supported here (lite mode)",
-    unsupported: "Not supported here (lite mode)",
+    downloadable: "Not downloaded yet: lite mode for now",
+    downloading: "Downloading: lite mode for now",
+    unavailable: "Not supported here: lite mode",
+    unsupported: "Not supported here: lite mode",
   }[model];
   $("modelStatus").textContent = modelText;
   $("modelStatus").className = model === "available" ? "ok" : "warn";
-  $("setup").hidden = canRead && model !== "downloadable";
 }
 
 (async () => {
   const { autoRun } = await chrome.storage.sync.get({ autoRun: true });
   $("autoRun").checked = autoRun;
   $("autoRun").addEventListener("change", (e) => chrome.storage.sync.set({ autoRun: e.target.checked }));
-  $("setup").addEventListener("click", () => {
-    chrome.tabs.create({ url: chrome.runtime.getURL("setup.html") });
-    window.close();
-  });
+  // Each status row opens the settings page at its section.
+  document.querySelectorAll(".status-row").forEach((row) =>
+    row.addEventListener("click", () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL(`setup.html#${row.dataset.section}`) });
+      window.close();
+    }),
+  );
   renderStatus();
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
