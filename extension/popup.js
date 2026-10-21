@@ -50,8 +50,13 @@ async function renderStatus() {
     unsupported: "Not supported here: lite mode",
   }[model];
   const { engine } = await chrome.storage.sync.get({ engine: "auto" });
-  $("modelStatus").textContent = engine === "lite" ? "Off: lite mode chosen in settings" : modelText;
-  $("modelStatus").className = model === "available" && engine !== "lite" ? "ok" : "warn";
+  const { liteHere } = await chrome.storage.local.get({ liteHere: false });
+  const slow = engine === "auto" && liteHere;
+  let text = modelText;
+  if (engine === "lite") text = "Off: lite mode chosen in settings";
+  else if (slow) text = "Off: lite mode on this computer";
+  $("modelStatus").textContent = text;
+  $("modelStatus").className = model === "available" && engine !== "lite" && !slow ? "ok" : "warn";
 }
 
 (async () => {

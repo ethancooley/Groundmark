@@ -44,7 +44,9 @@ chrome.runtime.onConnect.addListener((port) => {
     jobs.set(jobId, port);
     mine.add(jobId);
     const { engine } = await chrome.storage.sync.get({ engine: "auto" });
-    chrome.runtime.sendMessage({ target: "offscreen", type: "check", jobId, claims: msg.claims, engine }).catch(() => {
+    // Lite mode on this computer: the person's choice, kept on this computer only (not synced).
+    const { liteHere } = await chrome.storage.local.get({ liteHere: false });
+    chrome.runtime.sendMessage({ target: "offscreen", type: "check", jobId, claims: msg.claims, engine, liteHere }).catch(() => {
       port.postMessage({ type: "error", message: "Groundmark couldn't reach its checker. Reload the page to try again." });
     });
   });

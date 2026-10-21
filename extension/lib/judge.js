@@ -100,11 +100,11 @@ export async function createNanoJudge(LM, { monitor, signal } = {}) {
     signal,
   });
 
-  async function ask(claim, passages) {
+  async function ask(claim, passages, signal) {
     const session = await base.clone();
     const prompt = formatPrompt(claim, passages);
     try {
-      const raw = await session.prompt(prompt, { responseConstraint: SCHEMA });
+      const raw = await session.prompt(prompt, { responseConstraint: SCHEMA, ...(signal ? { signal } : {}) });
       return { prompt, raw, out: JSON.parse(raw), passageIds: passages.map((p) => p.id) };
     } finally {
       session.destroy();
@@ -113,15 +113,15 @@ export async function createNanoJudge(LM, { monitor, signal } = {}) {
 
   return {
     /** @returns {Promise<Judgment & { trace: object }>} */
-    async judge(claim, passages) {
+    async judge(claim, passages, { signal } = {}) {
       let asked;
       let retried = false;
       try {
-        asked = await ask(claim, passages);
+        asked = await ask(claim, passages, signal);
       } catch (e) {
         // Too long for the model's context: retry with the strongest passages only.
         if (e && (e.name === "QuotaExceededError" || /quota|context/i.test(String(e.message))) && passages.length > 2) {
-          asked = await ask(claim, passages.slice(0, 2));
+          asked = await ask(claim, passages.slice(0, 2), signal);
           retried = true;
         } else {
           throw e;
@@ -139,6 +139,18 @@ export async function createNanoJudge(LM, { monitor, signal } = {}) {
         trace: { prompt: asked.prompt, raw: asked.raw, sentPassageIds: asked.passageIds, retried },
       };
     },
+    /**
+     * A throwaway prompt that absorbs the model's one-time setup on its first
+     * answer, so a fast computer's first real sentence isn't mistaken for slow.
+     */
+    async warmUp() {
+      const session = await base.clone();
+      try {
+        await session.prompt(formatPrompt("Warm-up.", [{ id: "W1", text: "Warm-up." }]), { responseConstraint: SCHEMA });
+      } finally {
+        session.destroy();
+      }
+    },
     destroy() {
       base.destroy();
     },
@@ -151,19 +163,30 @@ export async function createNanoJudge(LM, { monitor, signal } = {}) {
  * so it never says "contradicted" and every result is labeled as a lite check.
  * @returns {Judgment & { coverage: number }}
  */
-export function judgeHeuristic(claim, passages) {
+/**
+ * @param {string} claim
+ * @param {Passage[]} passages
+ * @param {{ focus?: string }} [opts] focus: the part that must be found, such as a
+ *   list item ("Headache") checked with its heading ("Signs of too much caffeine: Headache.")
+ */
+export function judgeHeuristic(claim, passages, { focus } = {}) {
   let best = null;
   let bestCov = 0;
+  let bestFocus = 0;
   for (const p of passages) {
     const c = coverage(claim, p.text);
-    if (c > bestCov) {
-      bestCov = c;
+    const f = focus ? coverage(focus, p.text) : 1;
+    // With a focus, the passage with more of the item's own words wins; ties go to overall overlap.
+    if (best === null || f > bestFocus || (f === bestFocus && c > bestCov)) {
       best = p;
+      bestCov = c;
+      bestFocus = f;
     }
   }
   const claimNums = numbersIn(claim);
   const numsOk = best ? claimNums.every((n) => numbersIn(best.text).includes(n)) : false;
-  const supported = best !== null && bestCov >= 0.7 && numsOk;
+  const focusOk = !focus || bestFocus >= 0.7;
+  const supported = best !== null && bestCov >= 0.7 && numsOk && focusOk;
   return {
     verdict: supported ? "supported" : "not_found",
     partial: !supported && bestCov >= 0.4,
@@ -171,7 +194,10 @@ export function judgeHeuristic(claim, passages) {
     quote: "",
     coverage: bestCov,
     trace: {
-      rule: "Supported only when at least 70% of the sentence's key words appear in one passage and every figure in the sentence appears there too.",
+      rule: focus
+        ? "Supported only when at least 70% of the sentence's key words, including the list item's own words, appear in one passage and every figure in the sentence appears there too."
+        : "Supported only when at least 70% of the sentence's key words appear in one passage and every figure in the sentence appears there too.",
+      ...(focus ? { focus, focusMatched: focusOk } : {}),
       claimNumbers: claimNums,
       numbersMatched: numsOk,
     },
@@ -180,6 +206,8 @@ export function judgeHeuristic(claim, passages) {
       : best
         ? !numsOk && claimNums.length > 0
           ? "A figure in this sentence doesn't appear in the cited page."
+          : !focusOk
+            ? `The cited page doesn't mention “${focus}” here.`
           : "The cited page doesn't clearly contain this sentence's key details."
         : "Nothing in the cited page matched this sentence.",
   };

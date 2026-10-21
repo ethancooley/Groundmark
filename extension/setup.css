@@ -104,3 +104,4 @@ button.link[hidden], .hint[hidden] { display: none; }
 }
 .engine small { display: block; color: var(--slate); font-size: 14px; line-height: 1.45; margin-top: 2px; }
 .engine .hint { font-size: 14px; color: var(--slate) !important; margin: 4px 0 0 !important; }
+.engine .hint[hidden] { display: none; }

@@ -16,6 +16,7 @@ export const LIMITS = {
   // In "auto", the model is dropped for the rest of an Overview when it's this slow.
   slowSentenceMs: 8_000, // two sentences slower than this...
   verySlowSentenceMs: 20_000, // ...or one slower than this
+  readyMs: 30_000, // ...or the model not loaded and warmed up within this
 };
 
 /** How verdicts are made: "auto" (model when it's ready and fast enough), "model", or "lite". */
@@ -147,6 +148,15 @@ export function createChecker(env) {
     return doc;
   }
 
+  let warming = null;
+  /** The judge, loaded and warmed up (once per checker). */
+  async function readyJudge() {
+    const judge = await getJudge();
+    if (!warming) warming = judge.warmUp ? judge.warmUp().catch(() => {}) : Promise.resolve();
+    await warming;
+    return judge;
+  }
+
   async function getJudge() {
     if (!judgePromise) {
       judgePromise = createNanoJudge(env.LanguageModel).catch((e) => {
@@ -185,27 +195,30 @@ export function createChecker(env) {
     },
 
     /**
-     * Checks claims and reports progress through emit(): start, source, result
-     * (possibly several per claim), slow, done.
+     * Checks claims and reports progress through emit(): start, source, result,
+     * slow, done.
      *
-     * With the model, every sentence first gets a quick lite verdict marked
-     * provisional, then the model's verdict replaces it as each one finishes.
-     * In "auto", if the model turns out to be slow on this computer, the
-     * remaining sentences keep their lite verdicts.
+     * opts.engine is the setting ("auto", "model", or "lite"). opts.liteHere is
+     * the person's choice to use lite mode on this computer, which "auto"
+     * follows. In "auto", if the model is slow, the rest of the Overview gets
+     * lite verdicts and a "slow" event lets the page offer that choice.
      */
     async run(claims, emit, opts = {}) {
       const started = Date.now();
       const engine = ENGINES.includes(opts.engine) ? opts.engine : "auto";
-      const mode = engine === "lite" ? "heuristic" : await this.mode();
+      const liteHere = engine === "auto" && Boolean(opts.liteHere);
+      const mode = engine === "lite" || liteHere ? "heuristic" : await this.mode();
+      const why = engine === "lite" ? "lite" : liteHere ? "lite-here" : mode === "heuristic" ? "unavailable" : "model";
       const cleaned = claims.slice(0, LIMITS.maxClaims).map((c) => ({
         id: String(c.id),
         text: String(c.text).slice(0, 1200),
+        focus: c.focus ? String(c.focus).slice(0, 300) : undefined,
         sources: Array.from(new Set((c.sources || []).map(cleanSourceUrl).filter(Boolean))).slice(0, LIMITS.maxSourcesPerClaim),
       }));
 
       const unique = [];
       for (const c of cleaned) for (const s of c.sources) if (!unique.includes(s) && unique.length < LIMITS.maxUniqueSources) unique.push(s);
-      emit({ type: "start", claims: cleaned.length, sources: unique.length, mode, engine });
+      emit({ type: "start", claims: cleaned.length, sources: unique.length, mode, engine, why });
 
       const byUrl = new Map();
       await pool(unique, 4, async (url, i) => {
@@ -220,36 +233,59 @@ export function createChecker(env) {
         emit({ type: "result", result });
       };
       const docsFor = (claim) => claim.sources.map((u) => byUrl.get(u)).filter(Boolean);
+      const liteFor = (claim, reason) => {
+        const r = { ...check(claim, docsFor(claim), "heuristic"), id: claim.id };
+        return { ...r, trace: { ...r.trace, why: reason } };
+      };
 
-      // Lite mode (chosen, or the model isn't available): one pass, done.
-      const lite = cleaned.map((claim) => ({ ...check(claim, docsFor(claim), "heuristic", engine), id: claim.id }));
       if (mode === "heuristic") {
-        lite.forEach(final);
+        for (const claim of cleaned) final(liteFor(claim, why));
         emit({ type: "done", summary, ms: Date.now() - started });
         return;
       }
 
-      // Lite verdicts first, so nothing sits waiting on a slow model.
-      lite.forEach((r) => (r.verdict === "unverifiable" ? final(r) : emit({ type: "result", result: { ...r, provisional: true } })));
-
-      // Then the model, one sentence at a time (one model, one queue).
-      await getJudge().catch(() => {}); // getting the model ready isn't counted as slowness
+      // Get the model loaded and warmed up first; that time isn't counted against
+      // the sentences. In "auto" it's capped, so a slow computer isn't left waiting.
       let slowCount = 0;
       let slow = false;
-      for (let i = 0; i < cleaned.length; i++) {
-        if (lite[i].verdict === "unverifiable") continue;
+      const readying = readyJudge().then(
+        () => true,
+        () => true, // a failed load falls back per sentence below
+      );
+      let timer;
+      const ready =
+        engine === "auto"
+          ? await Promise.race([readying, new Promise((r) => (timer = setTimeout(() => r(false), LIMITS.readyMs)))])
+          : await readying;
+      clearTimeout(timer);
+      if (!ready) {
+        slow = true;
+        emit({ type: "slow", ms: LIMITS.readyMs, stage: "ready" });
+      }
+      for (const claim of cleaned) {
         if (slow) {
-          final({ ...lite[i], trace: { ...lite[i].trace, slowFallback: true } });
+          final(liteFor(claim, "slow"));
           continue;
         }
+        const watch = engine === "auto";
         const t0 = Date.now();
-        const result = { ...(await checkWithModel(cleaned[i], docsFor(cleaned[i]))), id: cleaned[i].id };
+        const result = {
+          ...(await checkWithModel(claim, docsFor(claim), watch ? LIMITS.verySlowSentenceMs : 0)),
+          id: claim.id,
+        };
         const ms = Date.now() - t0;
+        if (result.timedOut) {
+          // Too slow to wait for: this sentence and the rest get lite verdicts.
+          slow = true;
+          emit({ type: "slow", ms });
+          final(liteFor(claim, "slow"));
+          continue;
+        }
         result.trace = { ...result.trace, ms };
         final(result);
-        if (engine === "auto" && result.mode === "model" && !result.cached) {
+        if (watch && result.mode === "model" && !result.cached) {
           if (ms > LIMITS.slowSentenceMs) slowCount++;
-          if (ms > LIMITS.verySlowSentenceMs || slowCount >= 2) {
+          if (slowCount >= 2) {
             slow = true;
             emit({ type: "slow", ms });
           }
@@ -260,32 +296,40 @@ export function createChecker(env) {
   };
 
   /** A lite (word and figure matching) verdict. Synchronous, so it's instant. */
-  function check(claim, claimDocs, mode, engine) {
-    const key = `heuristic|${claim.text}|${claim.sources.join("|")}`;
+  function check(claim, claimDocs, mode) {
+    const key = `heuristic|${claim.text}|${claim.focus || ""}|${claim.sources.join("|")}`;
     const hit = results.get(key);
     if (hit) return hit;
     const readable = claimDocs.filter((d) => d.status === "ok");
     if (readable.length === 0) return unverifiable(claim, claimDocs, mode);
     const candidates = candidatesFor(claim, readable, LIMITS.maxPassagesLite);
-    const result = finish(claim, claimDocs, readable, candidates, judgeHeuristic(claim.text, candidates), "heuristic", "heuristic");
-    result.trace.engine = engine;
+    const result = finish(claim, claimDocs, readable, candidates, judgeHeuristic(claim.text, candidates, { focus: claim.focus }), "heuristic", "heuristic");
     results.set(key, result);
     return result;
   }
 
-  async function checkWithModel(claim, claimDocs) {
+  /** The model's verdict. With timeoutMs, gives up after that long and returns { timedOut: true }. */
+  async function checkWithModel(claim, claimDocs, timeoutMs = 0) {
     const key = `model|${claim.text}|${claim.sources.join("|")}`;
     const hit = results.get(key);
     if (hit) return { ...hit, cached: true };
     const readable = claimDocs.filter((d) => d.status === "ok");
+    if (readable.length === 0) return unverifiable(claim, claimDocs, "model");
     const candidates = candidatesFor(claim, readable, LIMITS.maxPassagesModel);
     let judgment;
     let usedMode = "model";
+    const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined;
     try {
-      judgment = await (await getJudge()).judge(claim.text, candidates);
+      const judging = (await getJudge()).judge(claim.text, candidates, { signal });
+      judging.catch(() => {}); // if the deadline wins, the late answer is ignored
+      // Race the deadline too, in case the model doesn't stop when asked.
+      judgment = signal
+        ? await Promise.race([judging, new Promise((_, reject) => signal.addEventListener("abort", () => reject(signal.reason)))])
+        : await judging;
     } catch (e) {
+      if (signal?.aborted) return { timedOut: true };
       console.warn("On-device model failed; using lite check", e);
-      judgment = judgeHeuristic(claim.text, candidates);
+      judgment = judgeHeuristic(claim.text, candidates, { focus: claim.focus });
       usedMode = "heuristic";
     }
     const result = finish(claim, claimDocs, readable, candidates, judgment, usedMode, "model");

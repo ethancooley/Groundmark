@@ -101,10 +101,15 @@ export default function Methodology() {
           stops streaming before reading it.
         </p>
         <p className="mt-4">
-          It splits the text into sentences, skipping headings, button labels, and fragments under five words. Each
-          sentence is paired with the links Google attached to it, in this order of preference: the link that follows
-          the sentence, the links in the same paragraph, and finally the Overview&rsquo;s full source list. The evidence
-          card says when the last fallback was used. Up to {LIMITS.maxClaims} sentences are checked per Overview, with
+          It splits the text into sentences, skipping headings, button labels, and fragments under five words. It
+          also skips sentences that aren&rsquo;t claims: follow-up questions, offers to help (&ldquo;tell me what you
+          drink and I can help you calculate&hellip;&rdquo;), and Google&rsquo;s own notices such as &ldquo;AI responses
+          may include mistakes.&rdquo; A short list item is checked together with the heading above its list, so
+          &ldquo;Headache&rdquo; under &ldquo;Signs of too much caffeine&rdquo; is checked as &ldquo;Signs of too much
+          caffeine: Headache,&rdquo; and the evidence card shows the sentence that was checked. Each sentence is paired
+          with the links Google attached to it, in this order of preference: the link that follows the sentence, the
+          links in the same paragraph or list item, the links Google put at the end of its list (which often cover the
+          whole list), and finally the Overview&rsquo;s full source list. The evidence card says which was used. Up to {LIMITS.maxClaims} sentences are checked per Overview, with
           at most {LIMITS.maxSourcesPerClaim} sources each.
         </p>
 
@@ -231,13 +236,17 @@ export default function Methodology() {
           check.&rdquo;
         </p>
         <p className="mt-4">
-          Lite mode also keeps Groundmark fast on slower computers. When the model is used, every sentence first gets
-          a lite verdict, shown dimmed, within a second or two, and the model&rsquo;s verdict replaces it as each
-          sentence finishes. The model can run on a computer that meets the requirements and still be slow, for
-          example without a capable GPU. So in the default Automatic setting, if two sentences each take longer than{" "}
-          {LIMITS.slowSentenceMs / 1000} seconds, or one takes longer than {LIMITS.verySlowSentenceMs / 1000}, the
-          rest of that Overview keeps its lite verdicts and the bar says why. Getting the model ready the first time
-          isn&rsquo;t counted. In settings, people can choose to always use the model or always use lite mode instead.
+          Lite mode also keeps Groundmark usable on slower computers. The model can run on a computer that meets the
+          requirements and still be slow, for example without a capable GPU. In the default Automatic setting,
+          Groundmark times each sentence. If two sentences each take longer than {LIMITS.slowSentenceMs / 1000}{" "}
+          seconds, or one takes longer than {LIMITS.verySlowSentenceMs / 1000}, the rest of that Overview gets lite
+          verdicts. Before timing anything, Groundmark loads the model and sends it one throwaway prompt, because a
+          model&rsquo;s first answer includes one-time setup that would make a fast computer look slow. That warm-up
+          isn&rsquo;t counted against the sentences, but in Automatic it&rsquo;s capped at{" "}
+          {LIMITS.readyMs / 1000} seconds, so a slow computer isn&rsquo;t left waiting either. Groundmark doesn&rsquo;t
+          switch to the weaker checker on its own after that: the bar asks whether to use lite mode on this computer,
+          and the answer applies to that computer only, not to the person&rsquo;s other computers. It can be changed
+          back in settings.
         </p>
 
         <H2 id="evaluation">8. Evaluation</H2>

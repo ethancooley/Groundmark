@@ -10,6 +10,9 @@ import { cleanSourceUrl, createChecker, isFetchable, LIMITS } from "../../extens
 
 const { DOMParser } = new JSDOM("").window;
 const env = (overrides: Record<string, unknown> = {}) => ({ DOMParser, ...overrides });
+/** Prompts sent for real sentences, leaving out the model's one-time warm-up. */
+const sentencePrompts = (fn: { mock: { calls: unknown[][] } }) =>
+  fn.mock.calls.map((c) => String(c[0])).filter((p) => !p.startsWith("Sentence: Warm-up."));
 
 describe("text", () => {
   it("splits sentences without breaking on abbreviations", () => {
@@ -232,7 +235,7 @@ describe("checker end to end (network and model mocked)", () => {
     expect(r.evidence.quote).toContain("330 metres");
     expect(r.confidence).toBeLessThan(0.5);
     // Source text reaches the model only as quoted passage data.
-    expect((prompt.mock.calls[0] as unknown[])[0]).toMatch(/Passages:\n\[S1-P\d+\]/);
+    expect(sentencePrompts(prompt)[0]).toMatch(/Passages:\n\[S1-P\d+\]/);
   });
 
   it("falls back to lite mode if the model throws, and caches results", async () => {
@@ -304,11 +307,9 @@ describe("verdict traces", () => {
     await checker.run([{ id: "t", text: "The Eiffel Tower was completed in 1889.", sources: ["https://t.example/"] }], (e: Record<string, unknown>) =>
       events.push(e),
     );
-    const trace = (events.find((e) => e.type === "result" && !(e.result as { provisional?: boolean }).provisional)!.result as {
-      trace: Record<string, unknown>;
-    }).trace;
+    const trace = (events.find((e) => e.type === "result")!.result as { trace: Record<string, unknown> }).trace;
     expect(trace.mode).toBe("model");
-    expect(trace.prompt).toBe((prompt.mock.calls[0] as unknown[])[0]); // the exact string sent
+    expect(trace.prompt).toBe(sentencePrompts(prompt)[0]); // the exact string sent
     expect(trace.raw).toBe(raw);
     expect(trace.chosenPassageId).toBe("S1-P1");
     expect(trace.modelPickedPassage).toBe(true);
@@ -390,7 +391,7 @@ describe("whole-page reading", () => {
   });
 });
 
-describe("speed: lite first, then the model", () => {
+describe("speed: lite mode when the model is slow", () => {
   const page = `<html><body><p>The Eiffel Tower was completed in 1889 for the World's Fair in Paris, France.</p>
     <p>It is about 330 metres tall and was the tallest structure in the world until 1930.</p></body></html>`;
   const fetch = async () => new Response(page, { headers: { "content-type": "text/html" } });
@@ -413,55 +414,100 @@ describe("speed: lite first, then the model", () => {
     { id: "b", text: "The Eiffel Tower is about 330 metres tall.", sources: ["https://t.example/"] },
     { id: "c", text: "It was the tallest structure in the world until 1930.", sources: ["https://t.example/"] },
   ];
-  type Result = { provisional?: boolean; mode: string; trace: Record<string, unknown> };
-  type Event = { type: string; mode?: string; slow?: boolean; result?: Result };
+  type Result = { mode: string; trace: Record<string, unknown> };
+  type Event = { type: string; mode?: string; why?: string; slow?: boolean; result?: Result };
   const run = async (opts: Record<string, unknown>, delayMs = 0) => {
     const m = model(delayMs);
     const events: Event[] = [];
     await createChecker(env({ fetch, LanguageModel: m.LanguageModel })).run(claims, (e: Event) => events.push(e), opts);
     return { events, prompt: m.prompt, results: events.filter((e) => e.type === "result").map((e) => e.result!) };
   };
+  const withLimits = async (limits: Partial<typeof LIMITS>, fn: () => Promise<void>) => {
+    const saved = { ...LIMITS };
+    Object.assign(LIMITS, limits);
+    try {
+      await fn();
+    } finally {
+      Object.assign(LIMITS, saved);
+    }
+  };
 
-  it("shows every lite verdict before the model's first verdict", async () => {
-    const { results } = await run({ engine: "auto" });
-    expect(results.slice(0, 3).every((r) => r.provisional && r.mode === "heuristic")).toBe(true);
-    expect(results.slice(3).every((r) => !r.provisional && r.mode === "model")).toBe(true);
-    expect(results).toHaveLength(6);
+  it("gives one verdict per sentence, from the model, when it's fast", async () => {
+    const { results, events } = await run({ engine: "auto" });
+    expect(results).toHaveLength(3);
+    expect(results.every((r) => r.mode === "model")).toBe(true);
+    expect(events.some((e) => e.type === "slow")).toBe(false);
   });
 
-  it("stops using the model when it's slow on this computer", async () => {
-    const saved = LIMITS.slowSentenceMs;
-    LIMITS.slowSentenceMs = 5;
-    try {
+  it("switches the rest of the Overview to lite after two slow sentences", () =>
+    withLimits({ slowSentenceMs: 5 }, async () => {
       const { events, prompt, results } = await run({ engine: "auto" }, 20);
-      expect(prompt).toHaveBeenCalledTimes(2); // two slow sentences, then lite for the rest
+      expect(sentencePrompts(prompt)).toHaveLength(2);
+      expect(results).toHaveLength(3);
+      expect(results.map((r) => r.mode)).toEqual(["model", "model", "heuristic"]);
+      expect(results[2].trace.why).toBe("slow");
       expect(events.some((e) => e.type === "slow")).toBe(true);
-      const last = results[results.length - 1];
-      expect(last.mode).toBe("heuristic");
-      expect(last.provisional).toBeFalsy();
-      expect(last.trace.slowFallback).toBe(true);
-      expect(events.at(-1)!.slow).toBe(true);
-    } finally {
-      LIMITS.slowSentenceMs = saved;
-    }
+    }));
+
+  it("stops waiting on a sentence that takes too long", () =>
+    withLimits({ verySlowSentenceMs: 10 }, async () => {
+      const { events, prompt, results } = await run({ engine: "auto" }, 200);
+      expect(sentencePrompts(prompt)).toHaveLength(1);
+      expect(results.every((r) => r.mode === "heuristic" && r.trace.why === "slow")).toBe(true);
+      expect(events.some((e) => e.type === "slow")).toBe(true);
+    }));
+
+  it("warms the model up once before the first sentence, and doesn't count it", () =>
+    withLimits({ verySlowSentenceMs: 150 }, async () => {
+      // Each prompt takes 100 ms; the warm-up plus the first sentence would exceed 150 ms if timed together.
+      const { prompt, results, events } = await run({ engine: "auto" }, 100);
+      expect(String((prompt.mock.calls[0] as unknown[])[0])).toMatch(/^Sentence: Warm-up\./);
+      expect(sentencePrompts(prompt)).toHaveLength(3);
+      expect(results.every((r) => r.mode === "model")).toBe(true);
+      expect(events.some((e) => e.type === "slow")).toBe(false);
+    }));
+
+  it("doesn't wait long for a model that's slow to get ready", () =>
+    withLimits({ readyMs: 20 }, async () => {
+      const { prompt, results, events } = await run({ engine: "auto" }, 200);
+      expect(sentencePrompts(prompt)).toHaveLength(0);
+      expect(results.every((r) => r.mode === "heuristic" && r.trace.why === "slow")).toBe(true);
+      expect(events.find((e) => e.type === "slow")).toMatchObject({ stage: "ready" });
+    }));
+
+  it("uses lite mode when the person chose it for this computer", async () => {
+    const { prompt, results, events } = await run({ engine: "auto", liteHere: true });
+    expect(prompt).not.toHaveBeenCalled();
+    expect(events[0].why).toBe("lite-here");
+    expect(results.every((r) => r.trace.why === "lite-here")).toBe(true);
   });
 
-  it("keeps using the model when set to always use it", async () => {
-    const saved = LIMITS.slowSentenceMs;
-    LIMITS.slowSentenceMs = 5;
-    try {
-      const { prompt, events } = await run({ engine: "model" }, 20);
-      expect(prompt).toHaveBeenCalledTimes(3);
+  it("keeps using the model when set to always use it", () =>
+    withLimits({ slowSentenceMs: 5, verySlowSentenceMs: 10 }, async () => {
+      const { prompt, events } = await run({ engine: "model", liteHere: true }, 20);
+      expect(sentencePrompts(prompt)).toHaveLength(3);
       expect(events.some((e) => e.type === "slow")).toBe(false);
-    } finally {
-      LIMITS.slowSentenceMs = saved;
-    }
-  });
+    }));
 
   it("never touches the model when set to lite", async () => {
     const { prompt, results, events } = await run({ engine: "lite" });
     expect(prompt).not.toHaveBeenCalled();
     expect(events[0].mode).toBe("heuristic");
-    expect(results.every((r) => r.mode === "heuristic" && !r.provisional && r.trace.engine === "lite")).toBe(true);
+    expect(results.every((r) => r.mode === "heuristic" && r.trace.why === "lite")).toBe(true);
+  });
+});
+
+describe("list items checked with their heading", () => {
+  const passages = [
+    { id: "S1-P1", sourceUrl: "https://t.example/", text: "Too much caffeine can cause side effects such as headache, insomnia, nervousness and a fast heartbeat." },
+  ];
+  it("supports an item the page names", () => {
+    const j = judgeHeuristic("Signs of too much caffeine: Headache.", passages, { focus: "Headache" });
+    expect(j.verdict).toBe("supported");
+  });
+  it("doesn't support an item on the heading's words alone", () => {
+    const j = judgeHeuristic("Signs of too much caffeine: Hair loss.", passages, { focus: "Hair loss" });
+    expect(j.verdict).toBe("not_found");
+    expect(j.explanation).toContain("Hair loss");
   });
 });

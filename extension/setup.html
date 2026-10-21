@@ -63,7 +63,7 @@
                 <input type="radio" name="engine" value="auto" />
                 <span>
                   <strong>Automatic</strong> <em>Recommended</em>
-                  <small>Uses the on-device model when it&rsquo;s ready. If it&rsquo;s slow on this computer, Groundmark switches to lite mode for the rest of that Overview.</small>
+                  <small>Uses the on-device model when it&rsquo;s ready. If it&rsquo;s slow, that Overview finishes in lite mode and Groundmark asks whether to use lite mode on this computer.</small>
                 </span>
               </label>
               <label>
@@ -80,7 +80,11 @@
                   <small>Instant. Matches words and figures instead of reading meaning, and never claims a contradiction.</small>
                 </span>
               </label>
-              <p class="hint">When the model is used, every sentence gets a quick lite verdict first, and the model&rsquo;s verdict replaces it as it finishes.</p>
+              <p class="hint" id="lite-here-note" hidden>
+                <strong>Lite mode is on for this computer</strong>, because you chose it when the on-device model was
+                slow. Your other computers aren&rsquo;t affected.
+                <button type="button" class="link" id="lite-here-off">Use the on-device model again</button>
+              </p>
             </fieldset>
 
             <dl class="facts" id="facts">

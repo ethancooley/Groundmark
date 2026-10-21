@@ -38,7 +38,7 @@ AI Overviews sit above every Google result and link to sources that look like pr
 
 Click the Groundmark icon in the toolbar to see the current page's results, check your setup, or turn automatic checking off. Clicking a setup row opens the settings page, where you can stop Groundmark from reading pages and see the model's size and where Chrome stores it.
 
-**The on-device model** needs Windows 10 or 11, macOS 13 or later, Linux, or a Chromebook Plus; at least 22 GB of free disk space; and either a GPU with more than 4 GB of memory or 16 GB of RAM with 4 or more CPU cores. On other computers, Groundmark uses **lite mode**, which matches words and figures instead of reading meaning. Lite mode never claims a contradiction, and every lite result is labeled "Lite check." On slower computers, every sentence gets a quick lite verdict first, and the model's verdict replaces it as it finishes. If the model is too slow, Groundmark keeps the lite verdicts for the rest of that Overview. You can also choose to always use the model, or always use lite mode, in settings.
+**The on-device model** needs Windows 10 or 11, macOS 13 or later, Linux, or a Chromebook Plus; at least 22 GB of free disk space; and either a GPU with more than 4 GB of memory or 16 GB of RAM with 4 or more CPU cores. On other computers, Groundmark uses **lite mode**, which matches words and figures instead of reading meaning. Lite mode never claims a contradiction, and every lite result is labeled "Lite check." If the model turns out to be slow on your computer, that Overview finishes in lite mode and Groundmark asks whether to use lite mode on that computer from now on. You can also choose to always use the model, or always use lite mode, in settings.
 
 ## How it works
 
@@ -74,6 +74,8 @@ The full methodology, including the exact prompt given to the model, is on the [
 extension/   The Chrome extension (no build step). The checker itself is in extension/lib.
 web/         The website, including the test page and the methodology page
 ```
+
+What changed in each version is in [CHANGELOG.md](CHANGELOG.md).
 
 To try a local copy, open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and choose the `extension` folder. To run the tests, run `npm install` and then `npm test` in `web`.
 

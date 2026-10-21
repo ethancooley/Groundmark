@@ -129,12 +129,26 @@ $("copy").addEventListener("click", async () => {
   }
 });
 
+// The setting syncs across the person's computers; "lite mode on this computer" doesn't.
 async function renderEngine() {
   const { engine } = await chrome.storage.sync.get({ engine: "auto" });
+  const { liteHere } = await chrome.storage.local.get({ liteHere: false });
   for (const r of document.querySelectorAll('input[name="engine"]')) r.checked = r.value === engine;
+  $("lite-here-note").hidden = !(engine === "auto" && liteHere);
 }
+$("lite-here-off").addEventListener("click", async () => {
+  await chrome.storage.local.remove("liteHere");
+  renderEngine();
+});
 for (const r of document.querySelectorAll('input[name="engine"]')) {
-  r.addEventListener("change", () => r.checked && chrome.storage.sync.set({ engine: r.value }));
+  r.addEventListener("change", async () => {
+    if (r.checked) {
+      // Picking a setting replaces the earlier choice made for this computer.
+      await chrome.storage.sync.set({ engine: r.value });
+      await chrome.storage.local.remove("liteHere");
+    }
+    renderEngine();
+  });
 }
 
 chrome.permissions.onAdded.addListener(renderRead);

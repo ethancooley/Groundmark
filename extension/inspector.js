@@ -76,9 +76,9 @@ function renderHeader(d) {
     engine = "Checked on your computer by Gemini Nano, the language model built into Chrome.";
     if (t.ms) engine += ` It took ${(t.ms / 1000).toFixed(1)} seconds.`;
   } else if (t.unreadable) engine = "No check was run, because none of the cited pages could be read.";
-  else if (d.provisional) engine = `${lite}. This is a quick first verdict; Gemini Nano was still checking this sentence when you opened this page.`;
-  else if (t.slowFallback) engine = `${lite}, because the on-device AI was slow on this computer. You can change this in Groundmark's settings.`;
-  else if (t.engine === "lite") engine = `${lite}, because lite mode is chosen in Groundmark's settings.`;
+  else if (t.why === "slow") engine = `${lite}, because the on-device AI was slow on this computer.`;
+  else if (t.why === "lite-here") engine = `${lite}, because lite mode is on for this computer. You can change it in Groundmark's settings.`;
+  else if (t.why === "lite") engine = `${lite}, because lite mode is chosen in Groundmark's settings.`;
   head.append(el("p", "engine", engine));
   main.append(head);
 }
@@ -88,7 +88,9 @@ function renderSources(d) {
     "Sources",
     d.scope === "overview"
       ? "Google didn't attach links to this sentence, so it was checked against the Overview's sources."
-      : "The links Google attached to this sentence.",
+      : d.scope === "list"
+        ? "This item had no links of its own, so it was checked against the links Google attached to its list."
+        : "The links Google attached to this sentence.",
   );
   const list = el("ul", "sources");
   for (const src of d.trace.sources || []) {

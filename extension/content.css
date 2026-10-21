@@ -23,14 +23,10 @@
 .ocx-badge[data-verdict="not_found"] { background: #e8590c; }
 .ocx-badge[data-verdict="contradicted"] { background: #e5383b; }
 .ocx-badge[data-verdict="pending"] svg { animation: ocx-spin 900ms linear infinite; }
-/* A lite verdict waiting for the model's: a soft pulsing ring. */
-.ocx-badge[data-provisional] { opacity: 0.72; box-shadow: 0 0 0 2px rgba(127, 127, 127, 0.35); animation: ocx-refine 1.4s ease-in-out infinite; }
-@keyframes ocx-refine { 50% { box-shadow: 0 0 0 4px rgba(127, 127, 127, 0.12); } }
 
 @keyframes ocx-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
   .ocx-badge[data-verdict="pending"] svg { animation: none; }
-  .ocx-badge[data-provisional] { animation: none; }
   .ocx-badge { transition: none; }
 }
 
@@ -89,5 +85,7 @@
 .ocx-bar[data-theme="dark"] .ocx-bar-action { color: #0f2240; background: #e8edf5; }
 .ocx-bar-action:focus-visible { outline: 2px solid #1a56db; outline-offset: 2px; }
 .ocx-bar-action[hidden] { display: none; }
+.ocx-bar-action.ocx-secondary { color: inherit; background: transparent; box-shadow: inset 0 0 0 1px rgba(127, 127, 127, 0.45); }
+.ocx-bar[data-theme="dark"] .ocx-bar-action.ocx-secondary { color: #e8edf5; background: transparent; }
 
 .ocx-card-host { all: initial; position: absolute; top: 0; left: 0; display: none; z-index: 2147483000; }

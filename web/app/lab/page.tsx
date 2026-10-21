@@ -101,11 +101,29 @@ export default function Lab() {
                 </li>
               </ul>
               <p>Caffeine is a stimulant that is naturally found in coffee, tea, and cacao beans.</p>
+              <h3 className="text-[17px] font-semibold">Signs of too much caffeine</h3>
+              <ul className="list-disc space-y-2 pl-6">
+                <li>Headache</li>
+                <li>Insomnia</li>
+                <li>Nervousness</li>
+                <li>
+                  Fast heartbeat <Cite href={MAYO} label="Mayo Clinic" />
+                </li>
+              </ul>
               <p>
                 Would you like information on{" "}
                 <a href="https://www.google.com/search?q=caffeine+in+green+tea" className="underline">caffeine in green tea</a>,{" "}
                 <a href="https://www.google.com/search?q=caffeine+withdrawal" className="underline">caffeine withdrawal</a>, or{" "}
                 <a href="https://www.google.com/search?q=decaf+coffee" className="underline">decaf coffee</a>?
+              </p>
+              <p>
+                If you want, tell me <strong>what you usually drink</strong> and <strong>how many cups a day</strong>, and I
+                can help you calculate your total daily caffeine intake.
+              </p>
+              <p className="text-[13px] text-slate">
+                This is for informational purposes only. For medical advice or diagnosis, consult a professional. AI
+                responses may include mistakes.{" "}
+                <a href="https://support.google.com/websearch?p=ai_overviews" className="underline">Learn more</a>
               </p>
             </div>
 

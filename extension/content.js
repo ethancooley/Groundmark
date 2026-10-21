@@ -38,8 +38,9 @@
     error: null,
     setupNeeded: false,
     mode: null, // "model" (on-device AI) or "heuristic" (lite mode)
-    engine: "auto", // the setting: "auto", "model", or "lite"
-    slow: false, // the model was too slow here, so this Overview finished in lite mode
+    why: null, // why lite mode was used: "lite" (setting), "lite-here" (chosen for this computer), "unavailable"
+    slow: false, // the model was slow on this Overview, so the rest used lite mode
+    slowAnswer: null, // the answer to "use lite mode here?": "lite", "keep", or null (not asked or not answered)
     highlights: null,
     card: null,
     pinned: null,
@@ -199,7 +200,8 @@
     const out = [];
     for (const [block, nodes] of groups) {
       const text = nodes.map((t) => t.data).join("");
-      if (clean(text).length < 25) continue;
+      // List items can be short ("Jitters or shakiness"); they're read with their heading.
+      if (clean(text).length < (block.closest("li") ? 6 : 25)) continue;
       const linkChars = nodes.filter((t) => t.parentElement.closest("a")).reduce((s, t) => s + t.data.length, 0);
       if (linkChars / text.length > 0.6) continue; // a source card, not Overview prose
       out.push({ block, nodes, text });
@@ -255,18 +257,61 @@
    * Overview often ends with an offer like "Would you like information on
    * parking or hotels?", whose links start new searches rather than cite sources.
    */
+  // Google's own notices under an Overview ("AI responses may include mistakes"),
+  // which describe the Overview rather than claim anything a source could back.
+  const NOTICE =
+    /^(this is for informational purposes only|for (medical|legal|financial|tax|professional|mental health) (advice|help|guidance)|consult (a|an|your) (professional|doctor|lawyer|healthcare|qualified)|ai responses may include mistakes|generative ai is experimental|learn more\b|ai overviews? (may|can) )/i;
+
   function isClaim(text) {
+    if (NOTICE.test(text)) return false;
     if (text.split(" ").length < 5 || /:$/.test(text) || !/[a-z]{3}/i.test(text)) return false;
     if (/\?["')\]]*$/.test(text)) return false;
     if (/^(would you like|do you want|want me to|let me know|i can (also )?(help|tell|show|find))\b/i.test(text)) return false;
+    // The Overview talking to the reader ("tell me what you drink and I can help
+    // you calculate..."): first person and second person together. Factual
+    // sentences in an Overview don't speak as "I".
+    if (/(^|[^a-z'])(i|i'll|i'd|i'm|me|my)(?![a-z'.])/i.test(text) && /\byou(r|rs)?\b/i.test(text)) return false;
     return true;
+  }
+
+  /**
+   * For a list item: the list, its lead-in (the heading or "...:" line right
+   * before it), and the links that cover the whole list. Google often puts one
+   * citation after the last bullet for the entire list.
+   */
+  const listCache = new WeakMap();
+  function listContext(block, root) {
+    const li = block.closest("li");
+    if (!li || !root.contains(li)) return null;
+    const list = li.parentElement;
+    if (!list || !/^(UL|OL)$/.test(list.tagName)) return null;
+    if (listCache.has(list)) return listCache.get(list);
+    let lead = "";
+    // The nearest text before the list, stepping out of wrappers if needed.
+    for (let node = list; node && node !== root && !lead; node = node.parentElement) {
+      let prev = node.previousElementSibling;
+      while (prev && isOurs(prev)) prev = prev.previousElementSibling;
+      if (prev) {
+        const t = clean(prev.textContent || "");
+        if (t && t.length <= 120) lead = t.replace(/[:.\s]+$/, "");
+        break;
+      }
+    }
+    const items = [...list.children].filter((c) => c.tagName === "LI");
+    const last = items[items.length - 1];
+    const links = Array.from(new Set([...(last ? linksIn(last) : []), ...citedLinks(list)]));
+    const ctx = { list, lead, links };
+    listCache.set(list, ctx);
+    return ctx;
   }
 
   function extractClaims(root) {
     const overviewSources = linksIn(sourceScope(root)).slice(0, MAX_SOURCES);
     const claims = [];
     for (const group of collectGroups(root)) {
-      const blockLinks = citedLinks(group.block);
+      const list = listContext(group.block, root);
+      // In a list, the next bullet isn't a citation chip, so only the item's own links count.
+      const blockLinks = list ? linksIn(group.block) : citedLinks(group.block);
       const sentences = [];
       for (const span of sentenceSpans(group.text)) {
         const start = locate(group.nodes, span.start);
@@ -283,18 +328,31 @@
       const perSentence = linksBySentence(group.block, sentences.map((s) => s.range));
 
       sentences.forEach((s, i) => {
-        const { text, range } = s;
+        const { range } = s;
+        let text = s.text;
+        let shown = null; // what's on the page, when the checked sentence adds the list's heading
+        if (NOTICE.test(text)) return;
+        if (list && list.lead && sentences.length === 1 && text.split(" ").length < 5) {
+          // "Jitters or shakiness" under "Signs of Too Much Caffeine" is checked as one sentence.
+          shown = text;
+          text = `${list.lead}: ${text.replace(/[.;,]+$/, "")}.`;
+        }
         if (!isClaim(text)) return;
         if (state.checkedTexts.has(text)) return;
-        // Most specific first: links right after this sentence, then the block's, then the Overview's.
+        // Most specific first: links right after this sentence, then the block's,
+        // then the list's, then the Overview's.
         let sources = perSentence[i];
         let scope = "sentence";
         if (sources.length === 0 && blockLinks.length) sources = blockLinks;
+        if (sources.length === 0 && list?.links.length) {
+          sources = list.links;
+          scope = "list";
+        }
         if (sources.length === 0) {
           sources = overviewSources;
           scope = "overview";
         }
-        claims.push({ id: `${hash(text)}-${claims.length}`, text, range, sources: sources.slice(0, MAX_SOURCES), scope });
+        claims.push({ id: `${hash(text)}-${claims.length}`, text, shown, range, sources: sources.slice(0, MAX_SOURCES), scope });
       });
     }
     return claims;
@@ -379,15 +437,9 @@
     const r = claim.result;
     const v = r ? r.verdict : "pending";
     claim.badge.dataset.verdict = v;
-    claim.badge.toggleAttribute("data-provisional", Boolean(r?.provisional));
     claim.badge.innerHTML = svg(v);
-    const note = r?.provisional ? " Lite check for now; the on-device model is still checking." : "";
-    claim.badge.setAttribute("aria-label", `Groundmark: ${VERDICTS[v].title}. ${r?.explanation || ""}${note}`);
-    if (state.highlights && r) {
-      // A provisional verdict can change, so clear the old color first.
-      for (const k of ["supported", "not_found", "contradicted"]) state.highlights[k].delete(claim.range);
-      if (state.highlights[v]) state.highlights[v].add(claim.range);
-    }
+    claim.badge.setAttribute("aria-label", `Groundmark: ${VERDICTS[v].title}. ${r?.explanation || ""}`);
+    if (state.highlights && r && state.highlights[v]) state.highlights[v].add(claim.range);
   }
 
   function ensureBar() {
@@ -400,7 +452,8 @@
       <span class="ocx-bar-name">Groundmark</span>
       <span class="ocx-bar-status" role="status" aria-live="polite"></span>
       <span class="ocx-bar-tally"></span>
-      <button type="button" class="ocx-bar-action" hidden></button>`;
+      <button type="button" class="ocx-bar-action" hidden></button>
+      <button type="button" class="ocx-bar-action ocx-secondary" hidden></button>`;
     // Put it right under the "AI Overview" heading row.
     let anchor = state.label;
     while (anchor.parentElement && anchor.parentElement !== state.root && !anchor.parentElement.contains(state.root)) {
@@ -414,11 +467,8 @@
   }
 
   function tally() {
-    const t = { supported: 0, not_found: 0, contradicted: 0, unverifiable: 0, pending: 0, refining: 0 };
-    for (const c of state.claims.values()) {
-      t[c.result ? c.result.verdict : "pending"]++;
-      if (c.result?.provisional) t.refining++;
-    }
+    const t = { supported: 0, not_found: 0, contradicted: 0, unverifiable: 0, pending: 0 };
+    for (const c of state.claims.values()) t[c.result ? c.result.verdict : "pending"]++;
     return t;
   }
 
@@ -426,10 +476,11 @@
     const bar = ensureBar();
     const status = bar.querySelector(".ocx-bar-status");
     const tallyEl = bar.querySelector(".ocx-bar-tally");
-    const action = bar.querySelector(".ocx-bar-action");
+    const [action, action2] = bar.querySelectorAll(".ocx-bar-action");
     const t = tally();
     const total = state.claims.size;
     action.hidden = true;
+    action2.hidden = true;
     tallyEl.replaceChildren();
 
     if (state.setupNeeded) {
@@ -458,23 +509,44 @@
       }
       return;
     }
-    const busy = t.pending || t.refining;
-    bar.dataset.state = busy ? "checking" : "done";
+    bar.dataset.state = t.pending ? "checking" : "done";
     const sentences = (n) => `${n} ${n === 1 ? "sentence" : "sentences"}`;
-    if (t.pending) status.textContent = `Checking ${sentences(total)} against the pages Google cited…`;
-    else if (t.refining)
-      status.textContent = `Lite verdicts shown. The on-device AI is checking ${t.refining} more ${t.refining === 1 ? "sentence" : "sentences"}…`;
-    else
-      status.textContent =
-        `${t.supported} of ${sentences(total)} supported by the pages Google cited.` +
-        (state.slow ? " Used lite mode: the on-device AI is slow on this computer." : "");
+    let note = "";
+    if (state.slow && !t.pending) {
+      // Ask once per slow Overview whether to use lite mode on this computer.
+      if (state.slowAnswer === "lite") note = " Lite mode is on for this computer. You can change it in Groundmark's settings.";
+      else if (state.slowAnswer === "keep") note = " The rest of this Overview used lite mode because the on-device AI was slow.";
+      else {
+        note = " The on-device AI is slow on this computer, so the rest of this Overview used lite mode.";
+        action.hidden = false;
+        action.textContent = "Use lite mode here";
+        action.title = "Use lite mode on this computer from now on. Your other computers aren't affected.";
+        action.onclick = async () => {
+          await chrome.storage.local.set({ liteHere: true });
+          state.slowAnswer = "lite";
+          renderBar();
+        };
+        action2.hidden = false;
+        action2.textContent = "Keep using the AI";
+        action2.onclick = () => {
+          state.slowAnswer = "keep";
+          renderBar();
+        };
+      }
+    }
+    if (!state.slow && state.why === "lite-here") note = " Lite mode is on for this computer.";
+    status.textContent = t.pending
+      ? `Checking ${sentences(total)} against the pages Google cited…`
+      : `${t.supported} of ${sentences(total)} supported by the pages Google cited.${note}`;
     if (state.mode === "heuristic" || state.slow) {
       const lite = document.createElement("span");
       lite.className = "ocx-chip ocx-lite";
       lite.textContent = "Lite mode";
       lite.title = state.slow
-        ? "The on-device AI was slow on this computer, so the rest of this Overview used lite mode. You can change this in Groundmark's settings."
-        : state.engine === "lite"
+        ? "The on-device AI was slow on this computer, so the rest of this Overview matched words and figures instead."
+        : state.why === "lite-here"
+          ? "Lite mode is on for this computer, so verdicts come from matching words and figures. You can change it in Groundmark's settings."
+          : state.why === "lite"
           ? "Lite mode is turned on in Groundmark's settings, so verdicts come from matching words and figures."
           : "The on-device AI isn't set up on this computer, so verdicts come from matching words and figures.";
       tallyEl.append(lite);
@@ -547,9 +619,10 @@
     icon.innerHTML = svg(v);
     head.append(icon, el("span", "verdict", VERDICTS[v].title));
     if (r?.partial && v === "not_found") head.append(el("span", "tag", "Partly"));
-    if (r?.mode === "heuristic") head.append(el("span", "tag", r.provisional ? "Lite check · updating" : "Lite check"));
+    if (r?.mode === "heuristic") head.append(el("span", "tag", "Lite check"));
     card.append(head);
 
+    if (claim.shown) card.append(el("p", "checked-as", `Checked as: “${claim.text}”`));
     if (!r) {
       card.append(el("p", "explain", "Reading the pages Google cited for this sentence."));
     } else {
@@ -577,12 +650,15 @@
       const scope =
         claim.scope === "sentence"
           ? "Checked against the links Google attached to this sentence."
-          : "Google didn't attach links to this sentence, so it was checked against the Overview's sources.";
+          : claim.scope === "list"
+            ? "Checked against the links Google attached to this list."
+            : "Google didn't attach links to this sentence, so it was checked against the Overview's sources.";
       let engine = "Checked on this computer by Gemini Nano.";
       if (r.mode === "heuristic") {
-        if (r.provisional) engine = "Lite check for now: matched words and figures. Gemini Nano is still checking this sentence.";
-        else if (r.trace?.slowFallback) engine = "Lite check: matched words and figures, because the on-device AI was slow on this computer.";
-        else if (r.trace?.engine === "lite") engine = "Lite check: matched words and figures, as chosen in settings.";
+        const why = r.trace?.why;
+        if (why === "slow") engine = "Lite check: matched words and figures, because the on-device AI was slow on this computer.";
+        else if (why === "lite-here") engine = "Lite check: matched words and figures, because lite mode is on for this computer.";
+        else if (why === "lite") engine = "Lite check: matched words and figures, as chosen in settings.";
         else if (r.trace?.fellBack) engine = "Lite check: matched words and figures, because the on-device AI ran into an error.";
         else engine = "Lite check: matched words and figures, because the on-device AI isn't set up.";
       }
@@ -607,7 +683,6 @@
                   scope: claim.scope,
                   verdict: r.verdict,
                   partial: r.partial,
-                  provisional: Boolean(r.provisional),
                   explanation: r.explanation,
                   evidence: r.evidence || null,
                   trace: r.trace,
@@ -680,8 +755,9 @@
     port.onMessage.addListener((msg) => {
       if (msg.type === "start") {
         state.mode = msg.mode;
-        state.engine = msg.engine || "auto";
+        state.why = msg.why || null;
         state.slow = false;
+        state.slowAnswer = null;
         renderBar();
       } else if (msg.type === "slow") {
         state.slow = true;
@@ -695,7 +771,7 @@
         const c = state.claims.get(msg.result.id);
         if (c) {
           c.result = msg.result;
-          if (!msg.result.provisional) open.delete(c.id);
+          open.delete(c.id);
           updateBadge(c);
           if (state.pinned === c.id || state.card?.host.style.display === "block") {
             if (state.pinned === c.id) showCard(c, true);
@@ -716,7 +792,7 @@
     });
     port.postMessage({
       type: "check",
-      claims: claims.map(({ id, text, sources }) => ({ id, text, sources })),
+      claims: claims.map(({ id, text, shown, sources }) => ({ id, text, focus: shown || undefined, sources })),
     });
     renderBar();
   }
@@ -861,6 +937,7 @@
     .site { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .host { opacity: 0.65; white-space: nowrap; }
     .note { margin: 0 0 8px; font-size: 12.5px; opacity: 0.75; }
+    .checked-as { margin: 0 0 8px; font-size: 12.5px; opacity: 0.75; font-style: italic; }
     .open { display: inline-block; font-size: 13px; font-weight: 600; color: #1a56db; text-decoration: none; margin: 2px 0 8px; }
     :host([data-theme="dark"]) .open { color: #8ab4f8; }
     .open:hover { text-decoration: underline; }

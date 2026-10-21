@@ -2,6 +2,25 @@
 
 All notable changes to the Groundmark Chrome extension, available on the [Chrome Web Store](https://chromewebstore.google.com/detail/mhfdggfjdiphhboegcnlkaialmmhjodl). Website-only changes aren't listed here.
 
+## 1.0.3 (2026-10-21)
+
+### Added
+
+- **Short list items are checked.** Bullets like "Headache" under "Signs of too much caffeine" used to be skipped for being too short. They're now checked together with their heading, as "Signs of too much caffeine: Headache," and the evidence card shows the sentence that was checked. In lite mode, the bullet's own words must appear in the source, not just the heading's.
+- **A list's citation covers the whole list.** When Google puts one citation after the last bullet, bullets without their own citation are checked against it instead of the Overview's general sources.
+
+### Changed
+
+- **One verdict per sentence.** Sentences no longer show a lite verdict that is later replaced by the model's. Each sentence waits for the on-device model, and lite mode is used only when the model is slow.
+- **Asks before using lite mode on a slow computer.** In Automatic mode, if the model is slow (two sentences over 8 seconds, or one over 20), the rest of that Overview gets lite verdicts and the bar asks whether to use lite mode on this computer. The choice applies to that computer only, and settings shows it with a button to switch back.
+- A sentence that takes longer than 20 seconds is no longer waited on; it and the rest of the Overview get lite verdicts.
+- **Warms up the model before timing it.** The model's first answer includes one-time setup, so Groundmark now sends one throwaway prompt first and doesn't count it, which keeps fast computers from being mistaken for slow. In Automatic mode, if loading and warming up take longer than 30 seconds, that Overview uses lite mode and the bar asks, so slow computers aren't left waiting.
+
+### Fixed
+
+- Google's notices under an Overview, such as "This is for informational purposes only" and "AI responses may include mistakes," were checked as if they were claims.
+- Offers to help, such as "If you want, tell me what you drink and I can help you calculate your intake," were checked as if they were claims. Sentences where the Overview speaks to the reader as "I" are now skipped, not only ones that end in a question mark.
+
 ## 1.0.2 (2026-10-20)
 
 ### Added
