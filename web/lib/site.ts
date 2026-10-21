@@ -3,6 +3,7 @@ export const SITE = {
   tagline: "Google's AI cites its sources. Groundmark reads them.",
   description:
     "A Chrome extension that checks each sentence of a Google AI Overview against the pages it cites, and shows you the evidence.",
+  url: "https://groundmark.dev",
   author: "Ethan Cooley",
   authorUrl: "https://ethancooley.com",
   github: "https://github.com/ethancooley/groundmark",

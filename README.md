@@ -4,7 +4,7 @@
 
 Groundmark is a free Chrome extension that checks each sentence of a Google AI Overview against the pages Google cited for it. Every sentence gets a verdict, along with the exact passage from the source behind it and a link that opens the page scrolled to that passage.
 
-**[Add Groundmark to Chrome](https://chromewebstore.google.com/detail/mhfdggfjdiphhboegcnlkaialmmhjodl)** · Requires Chrome 138 or later
+**[Add Groundmark to Chrome](https://chromewebstore.google.com/detail/mhfdggfjdiphhboegcnlkaialmmhjodl)** · [groundmark.dev](https://groundmark.dev) · Requires Chrome 138 or later
 
 It runs entirely on your computer. Verdicts come from Gemini Nano, the language model built into Chrome. There's no server, no account, and nothing to pay.
 
@@ -58,7 +58,7 @@ Click the Groundmark icon in the toolbar to see the current page's results, chec
 - **Confidence is computed, not self-reported.** Small models rate their own certainty poorly, so confidence comes from checks on the evidence.
 - **Honest about uncertainty.** "Not found" isn't "false," and unreadable sources get "Couldn't check," never a guess.
 
-The full methodology, including the exact prompt given to the model, is on the Groundmark website's methodology page, and the code that produces it is in [`extension/lib/judge.js`](extension/lib/judge.js).
+The full methodology, including the exact prompt given to the model, is on the [methodology page](https://groundmark.dev/methodology), and the code that produces it is in [`extension/lib/judge.js`](extension/lib/judge.js).
 
 ## Limitations
 
