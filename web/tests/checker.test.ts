@@ -6,7 +6,7 @@ import { buildPassages, rankPassages } from "../../extension/lib/passages.js";
 import { fragmentUrl, verifyQuote } from "../../extension/lib/quote.js";
 import { extractFromHtml } from "../../extension/lib/extract.js";
 import { confidenceFor, createNanoJudge, judgeHeuristic, nanoStatus, SCHEMA } from "../../extension/lib/judge.js";
-import { cleanSourceUrl, createChecker, isFetchable } from "../../extension/lib/checker.js";
+import { cleanSourceUrl, createChecker, isFetchable, LIMITS } from "../../extension/lib/checker.js";
 
 const { DOMParser } = new JSDOM("").window;
 const env = (overrides: Record<string, unknown> = {}) => ({ DOMParser, ...overrides });
@@ -304,7 +304,9 @@ describe("verdict traces", () => {
     await checker.run([{ id: "t", text: "The Eiffel Tower was completed in 1889.", sources: ["https://t.example/"] }], (e: Record<string, unknown>) =>
       events.push(e),
     );
-    const trace = (events.find((e) => e.type === "result")!.result as { trace: Record<string, unknown> }).trace;
+    const trace = (events.find((e) => e.type === "result" && !(e.result as { provisional?: boolean }).provisional)!.result as {
+      trace: Record<string, unknown>;
+    }).trace;
     expect(trace.mode).toBe("model");
     expect(trace.prompt).toBe((prompt.mock.calls[0] as unknown[])[0]); // the exact string sent
     expect(trace.raw).toBe(raw);
@@ -385,5 +387,81 @@ describe("whole-page reading", () => {
     expect(numbersIn("November 13, from 10:00 AM to 7:00 PM")).toEqual(expect.arrayContaining(["13", "10", "7"]));
     expect(tokens("10am")).toEqual(tokens("10:00 AM"));
     expect(tokens("13th")).toEqual(tokens("13"));
+  });
+});
+
+describe("speed: lite first, then the model", () => {
+  const page = `<html><body><p>The Eiffel Tower was completed in 1889 for the World's Fair in Paris, France.</p>
+    <p>It is about 330 metres tall and was the tallest structure in the world until 1930.</p></body></html>`;
+  const fetch = async () => new Response(page, { headers: { "content-type": "text/html" } });
+  const raw = JSON.stringify({ verdict: "supported", partial: false, passage: "S1-P1", quote: "completed in 1889", explanation: "Same year." });
+  const model = (delayMs = 0) => {
+    const prompt = vi.fn(async () => {
+      await new Promise((r) => setTimeout(r, delayMs));
+      return raw;
+    });
+    return {
+      prompt,
+      LanguageModel: {
+        availability: async () => "available",
+        create: async () => ({ clone: async () => ({ prompt, destroy() {} }), destroy() {} }),
+      },
+    };
+  };
+  const claims = [
+    { id: "a", text: "The Eiffel Tower was completed in 1889.", sources: ["https://t.example/"] },
+    { id: "b", text: "The Eiffel Tower is about 330 metres tall.", sources: ["https://t.example/"] },
+    { id: "c", text: "It was the tallest structure in the world until 1930.", sources: ["https://t.example/"] },
+  ];
+  type Result = { provisional?: boolean; mode: string; trace: Record<string, unknown> };
+  type Event = { type: string; mode?: string; slow?: boolean; result?: Result };
+  const run = async (opts: Record<string, unknown>, delayMs = 0) => {
+    const m = model(delayMs);
+    const events: Event[] = [];
+    await createChecker(env({ fetch, LanguageModel: m.LanguageModel })).run(claims, (e: Event) => events.push(e), opts);
+    return { events, prompt: m.prompt, results: events.filter((e) => e.type === "result").map((e) => e.result!) };
+  };
+
+  it("shows every lite verdict before the model's first verdict", async () => {
+    const { results } = await run({ engine: "auto" });
+    expect(results.slice(0, 3).every((r) => r.provisional && r.mode === "heuristic")).toBe(true);
+    expect(results.slice(3).every((r) => !r.provisional && r.mode === "model")).toBe(true);
+    expect(results).toHaveLength(6);
+  });
+
+  it("stops using the model when it's slow on this computer", async () => {
+    const saved = LIMITS.slowSentenceMs;
+    LIMITS.slowSentenceMs = 5;
+    try {
+      const { events, prompt, results } = await run({ engine: "auto" }, 20);
+      expect(prompt).toHaveBeenCalledTimes(2); // two slow sentences, then lite for the rest
+      expect(events.some((e) => e.type === "slow")).toBe(true);
+      const last = results[results.length - 1];
+      expect(last.mode).toBe("heuristic");
+      expect(last.provisional).toBeFalsy();
+      expect(last.trace.slowFallback).toBe(true);
+      expect(events.at(-1)!.slow).toBe(true);
+    } finally {
+      LIMITS.slowSentenceMs = saved;
+    }
+  });
+
+  it("keeps using the model when set to always use it", async () => {
+    const saved = LIMITS.slowSentenceMs;
+    LIMITS.slowSentenceMs = 5;
+    try {
+      const { prompt, events } = await run({ engine: "model" }, 20);
+      expect(prompt).toHaveBeenCalledTimes(3);
+      expect(events.some((e) => e.type === "slow")).toBe(false);
+    } finally {
+      LIMITS.slowSentenceMs = saved;
+    }
+  });
+
+  it("never touches the model when set to lite", async () => {
+    const { prompt, results, events } = await run({ engine: "lite" });
+    expect(prompt).not.toHaveBeenCalled();
+    expect(events[0].mode).toBe("heuristic");
+    expect(results.every((r) => r.mode === "heuristic" && !r.provisional && r.trace.engine === "lite")).toBe(true);
   });
 });

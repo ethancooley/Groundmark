@@ -129,6 +129,14 @@ $("copy").addEventListener("click", async () => {
   }
 });
 
+async function renderEngine() {
+  const { engine } = await chrome.storage.sync.get({ engine: "auto" });
+  for (const r of document.querySelectorAll('input[name="engine"]')) r.checked = r.value === engine;
+}
+for (const r of document.querySelectorAll('input[name="engine"]')) {
+  r.addEventListener("change", () => r.checked && chrome.storage.sync.set({ engine: r.value }));
+}
+
 chrome.permissions.onAdded.addListener(renderRead);
 chrome.permissions.onRemoved.addListener(renderRead);
 
@@ -138,6 +146,6 @@ chrome.permissions.onRemoved.addListener(renderRead);
   firstRun = !setupSeen && !location.hash;
   if (!setupSeen) chrome.storage.local.set({ setupSeen: true });
   showModelPath();
-  await Promise.all([renderRead(), renderModel()]);
+  await Promise.all([renderRead(), renderModel(), renderEngine()]);
   if (location.hash) document.querySelector(location.hash)?.scrollIntoView({ block: "start" });
 })();

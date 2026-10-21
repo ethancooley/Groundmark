@@ -230,6 +230,15 @@ export default function Methodology() {
           &ldquo;contradicted,&rdquo; its confidence never exceeds 60%, and every lite result is labeled &ldquo;Lite
           check.&rdquo;
         </p>
+        <p className="mt-4">
+          Lite mode also keeps Groundmark fast on slower computers. When the model is used, every sentence first gets
+          a lite verdict, shown dimmed, within a second or two, and the model&rsquo;s verdict replaces it as each
+          sentence finishes. The model can run on a computer that meets the requirements and still be slow, for
+          example without a capable GPU. So in the default Automatic setting, if two sentences each take longer than{" "}
+          {LIMITS.slowSentenceMs / 1000} seconds, or one takes longer than {LIMITS.verySlowSentenceMs / 1000}, the
+          rest of that Overview keeps its lite verdicts and the bar says why. Getting the model ready the first time
+          isn&rsquo;t counted. In settings, people can choose to always use the model or always use lite mode instead.
+        </p>
 
         <H2 id="evaluation">8. Evaluation</H2>
         <p className="mt-4">

@@ -89,3 +89,18 @@ button.link[hidden], .hint[hidden] { display: none; }
 }
 .hint { display: block; margin-top: 4px; color: var(--slate); }
 @media (max-width: 560px) { .facts div { grid-template-columns: 1fr; gap: 2px; } }
+
+.engine { margin: 22px 0 0; padding: 0; border: 0; display: grid; gap: 8px; }
+.engine legend { font-weight: 700; font-size: 15.5px; margin-bottom: 8px; padding: 0; }
+.engine label {
+  display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--line);
+  border-radius: 14px; cursor: pointer;
+}
+.engine label:has(input:checked) { border-color: var(--ink); }
+.engine input { margin: 5px 0 0; accent-color: var(--ink); }
+.engine strong { font-size: 15.5px; }
+.engine em {
+  font-style: normal; font-size: 12px; font-weight: 600; color: var(--ok); margin-left: 6px;
+}
+.engine small { display: block; color: var(--slate); font-size: 14px; line-height: 1.45; margin-top: 2px; }
+.engine .hint { font-size: 14px; color: var(--slate) !important; margin: 4px 0 0 !important; }

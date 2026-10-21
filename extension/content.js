@@ -38,6 +38,8 @@
     error: null,
     setupNeeded: false,
     mode: null, // "model" (on-device AI) or "heuristic" (lite mode)
+    engine: "auto", // the setting: "auto", "model", or "lite"
+    slow: false, // the model was too slow here, so this Overview finished in lite mode
     highlights: null,
     card: null,
     pinned: null,
@@ -377,9 +379,15 @@
     const r = claim.result;
     const v = r ? r.verdict : "pending";
     claim.badge.dataset.verdict = v;
+    claim.badge.toggleAttribute("data-provisional", Boolean(r?.provisional));
     claim.badge.innerHTML = svg(v);
-    claim.badge.setAttribute("aria-label", `Groundmark: ${VERDICTS[v].title}. ${r?.explanation || ""}`);
-    if (state.highlights && r && state.highlights[v]) state.highlights[v].add(claim.range);
+    const note = r?.provisional ? " Lite check for now; the on-device model is still checking." : "";
+    claim.badge.setAttribute("aria-label", `Groundmark: ${VERDICTS[v].title}. ${r?.explanation || ""}${note}`);
+    if (state.highlights && r) {
+      // A provisional verdict can change, so clear the old color first.
+      for (const k of ["supported", "not_found", "contradicted"]) state.highlights[k].delete(claim.range);
+      if (state.highlights[v]) state.highlights[v].add(claim.range);
+    }
   }
 
   function ensureBar() {
@@ -406,8 +414,11 @@
   }
 
   function tally() {
-    const t = { supported: 0, not_found: 0, contradicted: 0, unverifiable: 0, pending: 0 };
-    for (const c of state.claims.values()) t[c.result ? c.result.verdict : "pending"]++;
+    const t = { supported: 0, not_found: 0, contradicted: 0, unverifiable: 0, pending: 0, refining: 0 };
+    for (const c of state.claims.values()) {
+      t[c.result ? c.result.verdict : "pending"]++;
+      if (c.result?.provisional) t.refining++;
+    }
     return t;
   }
 
@@ -447,15 +458,25 @@
       }
       return;
     }
-    bar.dataset.state = t.pending ? "checking" : "done";
-    status.textContent = t.pending
-      ? `Checking ${total} ${total === 1 ? "sentence" : "sentences"} against the pages Google cited…`
-      : `${t.supported} of ${total} ${total === 1 ? "sentence" : "sentences"} supported by the pages Google cited.`;
-    if (state.mode === "heuristic") {
+    const busy = t.pending || t.refining;
+    bar.dataset.state = busy ? "checking" : "done";
+    const sentences = (n) => `${n} ${n === 1 ? "sentence" : "sentences"}`;
+    if (t.pending) status.textContent = `Checking ${sentences(total)} against the pages Google cited…`;
+    else if (t.refining)
+      status.textContent = `Lite verdicts shown. The on-device AI is checking ${t.refining} more ${t.refining === 1 ? "sentence" : "sentences"}…`;
+    else
+      status.textContent =
+        `${t.supported} of ${sentences(total)} supported by the pages Google cited.` +
+        (state.slow ? " Used lite mode: the on-device AI is slow on this computer." : "");
+    if (state.mode === "heuristic" || state.slow) {
       const lite = document.createElement("span");
       lite.className = "ocx-chip ocx-lite";
       lite.textContent = "Lite mode";
-      lite.title = "The on-device AI isn't set up on this computer, so verdicts come from matching words and figures.";
+      lite.title = state.slow
+        ? "The on-device AI was slow on this computer, so the rest of this Overview used lite mode. You can change this in Groundmark's settings."
+        : state.engine === "lite"
+          ? "Lite mode is turned on in Groundmark's settings, so verdicts come from matching words and figures."
+          : "The on-device AI isn't set up on this computer, so verdicts come from matching words and figures.";
       tallyEl.append(lite);
     }
     for (const v of ["supported", "not_found", "contradicted", "unverifiable"]) {
@@ -526,7 +547,7 @@
     icon.innerHTML = svg(v);
     head.append(icon, el("span", "verdict", VERDICTS[v].title));
     if (r?.partial && v === "not_found") head.append(el("span", "tag", "Partly"));
-    if (r?.mode === "heuristic") head.append(el("span", "tag", "Lite check"));
+    if (r?.mode === "heuristic") head.append(el("span", "tag", r.provisional ? "Lite check · updating" : "Lite check"));
     card.append(head);
 
     if (!r) {
@@ -557,10 +578,14 @@
         claim.scope === "sentence"
           ? "Checked against the links Google attached to this sentence."
           : "Google didn't attach links to this sentence, so it was checked against the Overview's sources.";
-      const engine =
-        r.mode === "heuristic"
-          ? "Lite check: matched words and figures, because the on-device AI isn't set up."
-          : "Checked on this computer by Gemini Nano.";
+      let engine = "Checked on this computer by Gemini Nano.";
+      if (r.mode === "heuristic") {
+        if (r.provisional) engine = "Lite check for now: matched words and figures. Gemini Nano is still checking this sentence.";
+        else if (r.trace?.slowFallback) engine = "Lite check: matched words and figures, because the on-device AI was slow on this computer.";
+        else if (r.trace?.engine === "lite") engine = "Lite check: matched words and figures, as chosen in settings.";
+        else if (r.trace?.fellBack) engine = "Lite check: matched words and figures, because the on-device AI ran into an error.";
+        else engine = "Lite check: matched words and figures, because the on-device AI isn't set up.";
+      }
       const level = r.confidence >= 0.75 ? "high" : r.confidence >= 0.5 ? "medium" : "low";
       meta.textContent = r.verdict === "unverifiable" ? scope : `${scope} ${engine} Confidence: ${level}.`;
       card.append(meta);
@@ -582,6 +607,7 @@
                   scope: claim.scope,
                   verdict: r.verdict,
                   partial: r.partial,
+                  provisional: Boolean(r.provisional),
                   explanation: r.explanation,
                   evidence: r.evidence || null,
                   trace: r.trace,
@@ -654,6 +680,11 @@
     port.onMessage.addListener((msg) => {
       if (msg.type === "start") {
         state.mode = msg.mode;
+        state.engine = msg.engine || "auto";
+        state.slow = false;
+        renderBar();
+      } else if (msg.type === "slow") {
+        state.slow = true;
         renderBar();
       } else if (msg.type === "setup") {
         state.setupNeeded = true;
@@ -664,7 +695,7 @@
         const c = state.claims.get(msg.result.id);
         if (c) {
           c.result = msg.result;
-          open.delete(c.id);
+          if (!msg.result.provisional) open.delete(c.id);
           updateBadge(c);
           if (state.pinned === c.id || state.card?.host.style.display === "block") {
             if (state.pinned === c.id) showCard(c, true);

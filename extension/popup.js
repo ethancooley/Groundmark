@@ -49,8 +49,9 @@ async function renderStatus() {
     unavailable: "Not supported here: lite mode",
     unsupported: "Not supported here: lite mode",
   }[model];
-  $("modelStatus").textContent = modelText;
-  $("modelStatus").className = model === "available" ? "ok" : "warn";
+  const { engine } = await chrome.storage.sync.get({ engine: "auto" });
+  $("modelStatus").textContent = engine === "lite" ? "Off: lite mode chosen in settings" : modelText;
+  $("modelStatus").className = model === "available" && engine !== "lite" ? "ok" : "warn";
 }
 
 (async () => {

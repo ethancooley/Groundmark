@@ -57,6 +57,32 @@
             </div>
             <p class="status" id="model-status" role="status">Checking this computer…</p>
 
+            <fieldset class="engine" id="engine">
+              <legend>How verdicts are made</legend>
+              <label>
+                <input type="radio" name="engine" value="auto" />
+                <span>
+                  <strong>Automatic</strong> <em>Recommended</em>
+                  <small>Uses the on-device model when it&rsquo;s ready. If it&rsquo;s slow on this computer, Groundmark switches to lite mode for the rest of that Overview.</small>
+                </span>
+              </label>
+              <label>
+                <input type="radio" name="engine" value="model" />
+                <span>
+                  <strong>Always use the on-device model</strong>
+                  <small>Most careful, but each Overview can take a minute or more on a slower computer.</small>
+                </span>
+              </label>
+              <label>
+                <input type="radio" name="engine" value="lite" />
+                <span>
+                  <strong>Always use lite mode</strong>
+                  <small>Instant. Matches words and figures instead of reading meaning, and never claims a contradiction.</small>
+                </span>
+              </label>
+              <p class="hint">When the model is used, every sentence gets a quick lite verdict first, and the model&rsquo;s verdict replaces it as it finishes.</p>
+            </fieldset>
+
             <dl class="facts" id="facts">
               <div>
                 <dt>Model</dt>

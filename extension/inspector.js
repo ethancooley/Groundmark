@@ -69,12 +69,16 @@ function renderHeader(d) {
   const q = el("blockquote", "claim", d.claim);
   head.append(q, pill);
   if (d.explanation) head.append(el("p", "explain", d.explanation));
-  const engine =
-    d.trace.mode === "model"
-      ? "Checked on your computer by Gemini Nano, the language model built into Chrome."
-      : d.trace.unreadable
-        ? "No check was run, because none of the cited pages could be read."
-        : "Checked in lite mode: matching words and figures, because the on-device AI isn't set up.";
+  const t = d.trace;
+  const lite = "Checked in lite mode: matching words and figures";
+  let engine = `${lite}, because the on-device AI isn't set up.`;
+  if (t.mode === "model") {
+    engine = "Checked on your computer by Gemini Nano, the language model built into Chrome.";
+    if (t.ms) engine += ` It took ${(t.ms / 1000).toFixed(1)} seconds.`;
+  } else if (t.unreadable) engine = "No check was run, because none of the cited pages could be read.";
+  else if (d.provisional) engine = `${lite}. This is a quick first verdict; Gemini Nano was still checking this sentence when you opened this page.`;
+  else if (t.slowFallback) engine = `${lite}, because the on-device AI was slow on this computer. You can change this in Groundmark's settings.`;
+  else if (t.engine === "lite") engine = `${lite}, because lite mode is chosen in Groundmark's settings.`;
   head.append(el("p", "engine", engine));
   main.append(head);
 }

@@ -16,7 +16,7 @@ chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === "check") {
     const send = (event) => chrome.runtime.sendMessage({ target: "background", jobId: msg.jobId, event }).catch(() => {});
     queue = queue
-      .then(() => checker.run(msg.claims, send))
+      .then(() => checker.run(msg.claims, send, { engine: msg.engine }))
       .catch((e) => {
         console.error(e);
         send({ type: "error", message: "The checker hit an unexpected error. Reload the page to try again." });

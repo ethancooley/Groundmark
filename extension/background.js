@@ -43,7 +43,8 @@ chrome.runtime.onConnect.addListener((port) => {
     const jobId = crypto.randomUUID();
     jobs.set(jobId, port);
     mine.add(jobId);
-    chrome.runtime.sendMessage({ target: "offscreen", type: "check", jobId, claims: msg.claims }).catch(() => {
+    const { engine } = await chrome.storage.sync.get({ engine: "auto" });
+    chrome.runtime.sendMessage({ target: "offscreen", type: "check", jobId, claims: msg.claims, engine }).catch(() => {
       port.postMessage({ type: "error", message: "Groundmark couldn't reach its checker. Reload the page to try again." });
     });
   });

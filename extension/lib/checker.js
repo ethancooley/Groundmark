@@ -13,7 +13,13 @@ export const LIMITS = {
   maxPassagesLite: 10,
   maxBytes: 3_000_000,
   timeoutMs: 10_000,
+  // In "auto", the model is dropped for the rest of an Overview when it's this slow.
+  slowSentenceMs: 8_000, // two sentences slower than this...
+  verySlowSentenceMs: 20_000, // ...or one slower than this
 };
+
+/** How verdicts are made: "auto" (model when it's ready and fast enough), "model", or "lite". */
+export const ENGINES = ["auto", "model", "lite"];
 
 const DOC_TTL = 30 * 60 * 1000;
 
@@ -179,12 +185,18 @@ export function createChecker(env) {
     },
 
     /**
-     * Checks claims and reports progress through emit(), using the same event
-     * shapes as the original server: start, source, result, done.
+     * Checks claims and reports progress through emit(): start, source, result
+     * (possibly several per claim), slow, done.
+     *
+     * With the model, every sentence first gets a quick lite verdict marked
+     * provisional, then the model's verdict replaces it as each one finishes.
+     * In "auto", if the model turns out to be slow on this computer, the
+     * remaining sentences keep their lite verdicts.
      */
-    async run(claims, emit) {
+    async run(claims, emit, opts = {}) {
       const started = Date.now();
-      const mode = await this.mode();
+      const engine = ENGINES.includes(opts.engine) ? opts.engine : "auto";
+      const mode = engine === "lite" ? "heuristic" : await this.mode();
       const cleaned = claims.slice(0, LIMITS.maxClaims).map((c) => ({
         id: String(c.id),
         text: String(c.text).slice(0, 1200),
@@ -193,7 +205,7 @@ export function createChecker(env) {
 
       const unique = [];
       for (const c of cleaned) for (const s of c.sources) if (!unique.includes(s) && unique.length < LIMITS.maxUniqueSources) unique.push(s);
-      emit({ type: "start", claims: cleaned.length, sources: unique.length, mode });
+      emit({ type: "start", claims: cleaned.length, sources: unique.length, mode, engine });
 
       const byUrl = new Map();
       await pool(unique, 4, async (url, i) => {
@@ -203,82 +215,132 @@ export function createChecker(env) {
       });
 
       const summary = { supported: 0, not_found: 0, contradicted: 0, unverifiable: 0 };
-      // One model, so claims run one at a time.
-      for (const claim of cleaned) {
-        const claimDocs = claim.sources.map((u) => byUrl.get(u)).filter(Boolean);
-        const key = `${mode}|${claim.text}|${claim.sources.join("|")}`;
-        let result = results.get(key);
-        if (!result) {
-          const readable = claimDocs.filter((d) => d.status === "ok");
-          if (readable.length === 0) {
-            result = unverifiable(claim, claimDocs, mode);
-          } else {
-            let candidates = [];
-            for (const d of readable) candidates.push(...rankPassages(claim.text, d.passages, LIMITS.passagesPerSource));
-            if (candidates.length === 0) for (const d of readable) candidates.push(...d.passages.slice(0, 2));
-            candidates = candidates.slice(0, mode === "model" ? LIMITS.maxPassagesModel : LIMITS.maxPassagesLite);
-
-            let judgment;
-            let usedMode = mode;
-            if (mode === "model") {
-              try {
-                judgment = await (await getJudge()).judge(claim.text, candidates);
-              } catch (e) {
-                console.warn("On-device model failed; using lite check", e);
-                judgment = judgeHeuristic(claim.text, candidates);
-                usedMode = "heuristic";
-              }
-            } else {
-              judgment = judgeHeuristic(claim.text, candidates);
-            }
-
-            const matched = candidates.find((p) => p.id === judgment.passageId);
-            const passage = matched || candidates[0];
-            const doc = readable.find((d) => d.url === passage.sourceUrl);
-            const { quote, verbatim } = verifyQuote(judgment.quote, passage.text, claim.text);
-            const overlap = coverage(claim.text, passage.text);
-            const confidence = confidenceFor(usedMode, judgment.verdict, { verbatim, overlap });
-            const titleOf = (url) => readable.find((d) => d.url === url)?.title;
-            // Everything that went into this verdict, shown on the inspector page.
-            const trace = {
-              mode: usedMode,
-              fellBack: usedMode !== mode,
-              candidates: candidates.map((p) => ({ id: p.id, text: p.text, sourceUrl: p.sourceUrl, sourceTitle: titleOf(p.sourceUrl) })),
-              chosenPassageId: passage.id,
-              modelPickedPassage: usedMode === "model" ? Boolean(matched) : null,
-              modelQuote: usedMode === "model" ? judgment.quote : null,
-              quoteVerbatim: verbatim,
-              overlap: Math.round(overlap * 100) / 100,
-              confidence,
-              sources: claimDocs.map((d) => ({ url: d.url, status: d.status, title: d.title })),
-              ...(judgment.trace || {}),
-            };
-            result = {
-              id: claim.id,
-              claim: claim.text,
-              verdict: judgment.verdict,
-              confidence,
-              partial: judgment.partial,
-              explanation: judgment.explanation,
-              evidence: {
-                sourceUrl: doc.finalUrl,
-                sourceTitle: doc.title,
-                quote,
-                fragmentUrl: fragmentUrl(doc.finalUrl, quote),
-                verbatim: usedMode === "heuristic" ? true : verbatim,
-              },
-              sources: claimDocs.map((d) => ({ url: d.url, status: d.status, title: d.title })),
-              mode: usedMode,
-              trace,
-            };
-            if (usedMode === mode) results.set(key, result);
-          }
-        }
-        result = { ...result, id: claim.id };
+      const final = (result) => {
         summary[result.verdict]++;
         emit({ type: "result", result });
+      };
+      const docsFor = (claim) => claim.sources.map((u) => byUrl.get(u)).filter(Boolean);
+
+      // Lite mode (chosen, or the model isn't available): one pass, done.
+      const lite = cleaned.map((claim) => ({ ...check(claim, docsFor(claim), "heuristic", engine), id: claim.id }));
+      if (mode === "heuristic") {
+        lite.forEach(final);
+        emit({ type: "done", summary, ms: Date.now() - started });
+        return;
       }
-      emit({ type: "done", summary, ms: Date.now() - started });
+
+      // Lite verdicts first, so nothing sits waiting on a slow model.
+      lite.forEach((r) => (r.verdict === "unverifiable" ? final(r) : emit({ type: "result", result: { ...r, provisional: true } })));
+
+      // Then the model, one sentence at a time (one model, one queue).
+      await getJudge().catch(() => {}); // getting the model ready isn't counted as slowness
+      let slowCount = 0;
+      let slow = false;
+      for (let i = 0; i < cleaned.length; i++) {
+        if (lite[i].verdict === "unverifiable") continue;
+        if (slow) {
+          final({ ...lite[i], trace: { ...lite[i].trace, slowFallback: true } });
+          continue;
+        }
+        const t0 = Date.now();
+        const result = { ...(await checkWithModel(cleaned[i], docsFor(cleaned[i]))), id: cleaned[i].id };
+        const ms = Date.now() - t0;
+        result.trace = { ...result.trace, ms };
+        final(result);
+        if (engine === "auto" && result.mode === "model" && !result.cached) {
+          if (ms > LIMITS.slowSentenceMs) slowCount++;
+          if (ms > LIMITS.verySlowSentenceMs || slowCount >= 2) {
+            slow = true;
+            emit({ type: "slow", ms });
+          }
+        }
+      }
+      emit({ type: "done", summary, ms: Date.now() - started, slow });
     },
   };
+
+  /** A lite (word and figure matching) verdict. Synchronous, so it's instant. */
+  function check(claim, claimDocs, mode, engine) {
+    const key = `heuristic|${claim.text}|${claim.sources.join("|")}`;
+    const hit = results.get(key);
+    if (hit) return hit;
+    const readable = claimDocs.filter((d) => d.status === "ok");
+    if (readable.length === 0) return unverifiable(claim, claimDocs, mode);
+    const candidates = candidatesFor(claim, readable, LIMITS.maxPassagesLite);
+    const result = finish(claim, claimDocs, readable, candidates, judgeHeuristic(claim.text, candidates), "heuristic", "heuristic");
+    result.trace.engine = engine;
+    results.set(key, result);
+    return result;
+  }
+
+  async function checkWithModel(claim, claimDocs) {
+    const key = `model|${claim.text}|${claim.sources.join("|")}`;
+    const hit = results.get(key);
+    if (hit) return { ...hit, cached: true };
+    const readable = claimDocs.filter((d) => d.status === "ok");
+    const candidates = candidatesFor(claim, readable, LIMITS.maxPassagesModel);
+    let judgment;
+    let usedMode = "model";
+    try {
+      judgment = await (await getJudge()).judge(claim.text, candidates);
+    } catch (e) {
+      console.warn("On-device model failed; using lite check", e);
+      judgment = judgeHeuristic(claim.text, candidates);
+      usedMode = "heuristic";
+    }
+    const result = finish(claim, claimDocs, readable, candidates, judgment, usedMode, "model");
+    if (usedMode === "model") results.set(key, result);
+    return result;
+  }
+
+  function candidatesFor(claim, readable, max) {
+    let candidates = [];
+    for (const d of readable) candidates.push(...rankPassages(claim.text, d.passages, LIMITS.passagesPerSource));
+    if (candidates.length === 0) for (const d of readable) candidates.push(...d.passages.slice(0, 2));
+    return candidates.slice(0, max);
+  }
+
+  /** Verifies the quote, computes confidence, and records everything for the inspector. */
+  function finish(claim, claimDocs, readable, candidates, judgment, usedMode, mode) {
+    const matched = candidates.find((p) => p.id === judgment.passageId);
+    const passage = matched || candidates[0];
+    const doc = readable.find((d) => d.url === passage.sourceUrl);
+    const { quote, verbatim } = verifyQuote(judgment.quote, passage.text, claim.text);
+    const overlap = coverage(claim.text, passage.text);
+    const confidence = confidenceFor(usedMode, judgment.verdict, { verbatim, overlap });
+    const titleOf = (url) => readable.find((d) => d.url === url)?.title;
+    const sources = claimDocs.map((d) => ({ url: d.url, status: d.status, title: d.title }));
+    // Everything that went into this verdict, shown on the inspector page.
+    const trace = {
+      mode: usedMode,
+      fellBack: usedMode !== mode,
+      candidates: candidates.map((p) => ({ id: p.id, text: p.text, sourceUrl: p.sourceUrl, sourceTitle: titleOf(p.sourceUrl) })),
+      chosenPassageId: passage.id,
+      modelPickedPassage: usedMode === "model" ? Boolean(matched) : null,
+      modelQuote: usedMode === "model" ? judgment.quote : null,
+      quoteVerbatim: verbatim,
+      overlap: Math.round(overlap * 100) / 100,
+      confidence,
+      sources,
+      ...(judgment.trace || {}),
+    };
+    return {
+      id: claim.id,
+      claim: claim.text,
+      verdict: judgment.verdict,
+      confidence,
+      partial: judgment.partial,
+      explanation: judgment.explanation,
+      evidence: {
+        sourceUrl: doc.finalUrl,
+        sourceTitle: doc.title,
+        quote,
+        fragmentUrl: fragmentUrl(doc.finalUrl, quote),
+        verbatim: usedMode === "heuristic" ? true : verbatim,
+      },
+      sources,
+      mode: usedMode,
+      trace,
+    };
+  }
 }
