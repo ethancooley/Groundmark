@@ -190,8 +190,16 @@ export default function Methodology() {
           </li>
           <li>
             <strong className="text-ink">Quote check.</strong> The quote must appear word for word in that passage.
-            If it doesn&rsquo;t, it&rsquo;s replaced with the passage&rsquo;s closest real sentence and confidence is
-            lowered. Every quote you see is text that exists on the page.
+            If it doesn&rsquo;t, it&rsquo;s replaced with the passage&rsquo;s closest real sentence, favoring
+            sentences that contain the claim&rsquo;s figures, and confidence is lowered. If no sentence is close, no
+            quote is shown rather than an unrelated one. Every quote you see is text that exists on the page.
+          </li>
+          <li>
+            <strong className="text-ink">Contradiction check.</strong> &ldquo;Contradicted&rdquo; is the most serious
+            verdict, so the model&rsquo;s is accepted only with real evidence: its quote must be on the page, and the
+            quoted figure must actually conflict. A figure inside a range the sentence gives (37 mg for
+            &ldquo;30&ndash;50 mg&rdquo;) agrees with it. When either check fails, the lite check decides instead, and
+            the evidence card and inspector say the model was overruled.
           </li>
           <li>
             <strong className="text-ink">Prompt injection.</strong> Pages can hide instructions meant for AI.
@@ -218,7 +226,7 @@ export default function Methodology() {
               <tr><td className="px-4 py-3">Quote had to be replaced</td><td className="px-4 py-3">Start at 45%</td></tr>
               <tr><td className="px-4 py-3">&ldquo;Supported,&rdquo; but under 35% of the sentence&rsquo;s key words are in the passage</td><td className="px-4 py-3">&minus;25 points</td></tr>
               <tr><td className="px-4 py-3">&ldquo;Supported,&rdquo; with 70% or more of the key words in the passage</td><td className="px-4 py-3">+10 points</td></tr>
-              <tr><td className="px-4 py-3">&ldquo;Contradicted,&rdquo; but the quote had to be replaced</td><td className="px-4 py-3">&minus;15 points</td></tr>
+              <tr><td className="px-4 py-3">The model&rsquo;s &ldquo;contradicted&rdquo; was overruled</td><td className="px-4 py-3">Lite-check confidence, at most 60%</td></tr>
             </tbody>
           </table>
         </div>

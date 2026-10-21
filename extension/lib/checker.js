@@ -1,7 +1,7 @@
 import { extractFromHtml, extractFromText } from "./extract.js";
 import { buildPassages, rankPassages } from "./passages.js";
 import { fragmentUrl, verifyQuote } from "./quote.js";
-import { coverage } from "./text.js";
+import { coverage, figuresWithinClaimRanges } from "./text.js";
 import { confidenceFor, createNanoJudge, judgeHeuristic, nanoStatus } from "./judge.js";
 
 export const LIMITS = {
@@ -344,8 +344,47 @@ export function createChecker(env) {
     return candidates.slice(0, max);
   }
 
-  /** Verifies the quote, computes confidence, and records everything for the inspector. */
+  /**
+   * Like build(), plus one safeguard: "contradicted" is the most serious
+   * verdict, so it's only accepted from the model when its quote is really on
+   * the page and the figure it relies on actually conflicts. Otherwise the
+   * lite check decides, and the inspector shows that the model was overruled.
+   */
   function finish(claim, claimDocs, readable, candidates, judgment, usedMode, mode) {
+    const result = build(claim, claimDocs, readable, candidates, judgment, usedMode, mode);
+    if (usedMode !== "model" || judgment.verdict !== "contradicted") return result;
+    let overruled = null;
+    if (!result.trace.quoteVerbatim) {
+      overruled = { reason: "quote", text: "its quote isn't on the page" };
+    } else {
+      // Only the quote counts: it's text on the page. The explanation is the model's own words.
+      const agree = figuresWithinClaimRanges(claim.text, result.evidence.quote);
+      if (agree.length) overruled = { reason: "range", ...agree[0], text: `the page's figure (${agree[0].figure}) is within ${agree[0].range}` };
+    }
+    if (!overruled) return result;
+    const lite = judgeHeuristic(claim.text, candidates, { focus: claim.focus });
+    const decided = build(claim, claimDocs, readable, candidates, lite, "heuristic", mode);
+    decided.explanation = `Gemini Nano said the page contradicts this, but ${overruled.text}, so Groundmark didn't accept that. ${lite.explanation}`;
+    decided.mode = "model";
+    decided.trace = {
+      ...decided.trace,
+      mode: "model",
+      fellBack: false,
+      prompt: result.trace.prompt,
+      raw: result.trace.raw,
+      sentPassageIds: result.trace.sentPassageIds,
+      retried: result.trace.retried,
+      modelPickedPassage: result.trace.modelPickedPassage,
+      modelQuote: judgment.quote,
+      modelVerdict: "contradicted",
+      modelExplanation: judgment.explanation,
+      overruled,
+    };
+    return decided;
+  }
+
+  /** Verifies the quote, computes confidence, and records everything for the inspector. */
+  function build(claim, claimDocs, readable, candidates, judgment, usedMode, mode) {
     const matched = candidates.find((p) => p.id === judgment.passageId);
     const passage = matched || candidates[0];
     const doc = readable.find((d) => d.url === passage.sourceUrl);
@@ -379,7 +418,7 @@ export function createChecker(env) {
         sourceUrl: doc.finalUrl,
         sourceTitle: doc.title,
         quote,
-        fragmentUrl: fragmentUrl(doc.finalUrl, quote),
+        fragmentUrl: quote ? fragmentUrl(doc.finalUrl, quote) : doc.finalUrl,
         verbatim: usedMode === "heuristic" ? true : verbatim,
       },
       sources,

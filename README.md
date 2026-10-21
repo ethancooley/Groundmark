@@ -46,7 +46,7 @@ Click the Groundmark icon in the toolbar to see the current page's results, chec
 2. **Read the sources.** It opens each cited page, without your cookies, and reads all of its text, skipping menus, buttons, and scripts, so facts in side sections aren't missed.
 3. **Find the relevant passages.** Each page is split into short passages, ranked by how many of the sentence's key words and figures they share.
 4. **Judge.** Gemini Nano compares the sentence with the best passages and returns a verdict, a quote from the source, and a one-sentence explanation.
-5. **Verify the receipt.** The quote is checked word for word against the page. If it doesn't match, the closest real sentence replaces it and confidence drops, so every quote you see exists on the page.
+5. **Verify the receipt.** The quote is checked word for word against the page. If it doesn't match, the closest real sentence replaces it and confidence drops, so every quote you see exists on the page. A "contradicted" verdict also needs its quote on the page and a figure that really conflicts; otherwise Groundmark overrules the model.
 6. **Show it.** A badge appears after each sentence, with the evidence one hover away.
 
 ## Privacy and responsible design

@@ -2,6 +2,14 @@
 
 All notable changes to the Groundmark Chrome extension, available on the [Chrome Web Store](https://chromewebstore.google.com/detail/mhfdggfjdiphhboegcnlkaialmmhjodl). Website-only changes aren't listed here.
 
+## 1.0.4 (2026-10-21)
+
+### Fixed
+
+- **"Contradicted" now needs real evidence.** The on-device model sometimes called a sentence contradicted when it wasn't, for example saying a page's 37 mg conflicts with "30–50 mg." Groundmark now accepts the model's "contradicted" only when its quote is on the page and the quoted figure actually conflicts; a figure inside the sentence's range agrees with it. Otherwise the lite check decides, and the evidence card and inspector say the model was overruled. The model's instructions also now say that a figure inside a range matches.
+- When the model's quote isn't on the page, the replacement sentence now favors sentences with the claim's figures, and no quote is shown when nothing is close, instead of an unrelated sentence.
+- Short list items still weren't checked on real Google pages. Google wraps each bullet in its own container inside the list, so Groundmark didn't recognize the bullets as part of a list and couldn't find the list's heading or citation. It now finds the list through those wrappers.
+
 ## 1.0.3 (2026-10-21)
 
 ### Added

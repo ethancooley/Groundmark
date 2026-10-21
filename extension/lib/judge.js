@@ -15,7 +15,7 @@ export const SYSTEM = `You check Google AI Overviews. You get one sentence from 
 
 Judge only what the passages say, not what you know.
 
-- supported: the passages state the sentence or it follows directly. Every number, date, name, and word like "always", "most", "only", or "safe" must match.
+- supported: the passages state the sentence or it follows directly. Every number, date, name, and word like "always", "most", "only", or "safe" must match. A figure inside a range the sentence gives matches it: 37 mg agrees with "30–50 mg".
 - contradicted: the passages say something that conflicts with part of the sentence, such as a different number.
 - not_found: neither. Use this when the passages are on topic but don't confirm the details. If they confirm only part, set partial to true.
 

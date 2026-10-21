@@ -281,10 +281,12 @@
    */
   const listCache = new WeakMap();
   function listContext(block, root) {
-    const li = block.closest("li");
+    const li = block.closest("li, [role=listitem]");
     if (!li || !root.contains(li)) return null;
-    const list = li.parentElement;
-    if (!list || !/^(UL|OL)$/.test(list.tagName)) return null;
+    // Google wraps each item in its own <div> inside the list, so the list is
+    // the nearest list ancestor, not necessarily the item's parent.
+    const list = li.parentElement?.closest("ul, ol, [role=list]");
+    if (!list || !root.contains(list)) return null;
     if (listCache.has(list)) return listCache.get(list);
     let lead = "";
     // The nearest text before the list, stepping out of wrappers if needed.
@@ -297,7 +299,9 @@
         break;
       }
     }
-    const items = [...list.children].filter((c) => c.tagName === "LI");
+    const items = [...list.querySelectorAll("li, [role=listitem]")].filter(
+      (item) => item.parentElement?.closest("ul, ol, [role=list]") === list,
+    );
     const last = items[items.length - 1];
     const links = Array.from(new Set([...(last ? linksIn(last) : []), ...citedLinks(list)]));
     const ctx = { list, lead, links };
@@ -629,18 +633,22 @@
       card.append(el("p", "explain", r.explanation));
       if (r.evidence) {
         const fig = el("figure", "evidence");
-        const q = el("blockquote", "quote");
-        q.append(el("mark", "", r.evidence.quote));
-        fig.append(q);
+        if (r.evidence.quote) {
+          const q = el("blockquote", "quote");
+          q.append(el("mark", "", r.evidence.quote));
+          fig.append(q);
+        }
         const cap = el("figcaption", "source");
         cap.append(el("span", "site", r.evidence.sourceTitle || hostOf(r.evidence.sourceUrl)));
         cap.append(el("span", "host", hostOf(r.evidence.sourceUrl)));
         fig.append(cap);
         card.append(fig);
-        if (!r.evidence.verbatim) {
+        if (!r.evidence.quote) {
+          card.append(el("p", "note", "No sentence on the page closely matches this one, so no quote is shown."));
+        } else if (!r.evidence.verbatim) {
           card.append(el("p", "note", "The checker's quote didn't match the page exactly, so this is the closest real sentence."));
         }
-        const a = el("a", "open", "Open the source at this passage");
+        const a = el("a", "open", r.evidence.quote ? "Open the source at this passage" : "Open the source");
         a.href = r.evidence.fragmentUrl;
         a.target = "_blank";
         a.rel = "noopener noreferrer";

@@ -1,9 +1,9 @@
 // Tests run against the extension's own checker code in ../extension/lib.
 import { describe, expect, it, vi } from "vitest";
 import { JSDOM } from "jsdom";
-import { sentenceSpans, splitSentences, tokens, numbersIn, coverage } from "../../extension/lib/text.js";
+import { sentenceSpans, splitSentences, tokens, numbersIn, coverage, rangesIn, figuresWithinClaimRanges } from "../../extension/lib/text.js";
 import { buildPassages, rankPassages } from "../../extension/lib/passages.js";
-import { fragmentUrl, verifyQuote } from "../../extension/lib/quote.js";
+import { bestSentence, fragmentUrl, verifyQuote } from "../../extension/lib/quote.js";
 import { extractFromHtml } from "../../extension/lib/extract.js";
 import { confidenceFor, createNanoJudge, judgeHeuristic, nanoStatus, SCHEMA } from "../../extension/lib/judge.js";
 import { cleanSourceUrl, createChecker, isFetchable, LIMITS } from "../../extension/lib/checker.js";
@@ -215,7 +215,7 @@ describe("checker end to end (network and model mocked)", () => {
     expect(events.at(-1)).toMatchObject({ type: "done", summary: { supported: 1, not_found: 1, unverifiable: 3 } });
   });
 
-  it("uses Gemini Nano when available and only shows real quotes", async () => {
+  it("uses Gemini Nano, only shows real quotes, and needs a real quote to say contradicted", async () => {
     const prompt = vi.fn(async () =>
       JSON.stringify({ verdict: "contradicted", partial: false, passage: "S1-P1", quote: "The tower is 500 metres tall", explanation: "The page says 330 metres, not 500." }),
     );
@@ -228,12 +228,19 @@ describe("checker end to end (network and model mocked)", () => {
       { id: "x", text: "The Eiffel Tower is 500 metres tall.", sources: ["https://tower.example/"] },
     ]);
     expect(events[0]).toMatchObject({ mode: "model" });
-    const r = results.x as { verdict: string; mode: string; confidence: number; evidence: { quote: string; verbatim: boolean } };
-    expect(r.verdict).toBe("contradicted");
+    const r = results.x as {
+      verdict: string;
+      mode: string;
+      confidence: number;
+      evidence: { quote: string };
+      trace: { overruled?: { reason: string } };
+    };
+    // The model's quote isn't on the page, so its "contradicted" isn't accepted.
+    expect(r.verdict).toBe("not_found");
+    expect(r.trace.overruled?.reason).toBe("quote");
     expect(r.mode).toBe("model");
-    expect(r.evidence.verbatim).toBe(false);
     expect(r.evidence.quote).toContain("330 metres");
-    expect(r.confidence).toBeLessThan(0.5);
+    expect(r.confidence).toBeLessThan(0.7);
     // Source text reaches the model only as quoted passage data.
     expect(sentencePrompts(prompt)[0]).toMatch(/Passages:\n\[S1-P\d+\]/);
   });
@@ -509,5 +516,74 @@ describe("list items checked with their heading", () => {
     const j = judgeHeuristic("Signs of too much caffeine: Hair loss.", passages, { focus: "Hair loss" });
     expect(j.verdict).toBe("not_found");
     expect(j.explanation).toContain("Hair loss");
+  });
+});
+
+describe("contradictions need real evidence", () => {
+  const page = `<html><body>
+    <p>Decaffeinated coffees and teas have less caffeine than their regular counterparts, but still contain some caffeine.</p>
+    <p>An 8-ounce cup of green or black tea has 30-50 milligrams of caffeine, and green tea often has about 37 milligrams.</p>
+  </body></html>`;
+  const fetch = async () => new Response(page, { headers: { "content-type": "text/html" } });
+  const judgeWith = async (claim: string, answer: Record<string, unknown>) => {
+    const prompt = vi.fn(async (text: string) => {
+      if (text.startsWith("Sentence: Warm-up.")) return "{}";
+      const first = text.match(/^\[(S\d+-P\d+)\]/m)![1];
+      return JSON.stringify({ partial: false, passage: first, ...answer });
+    });
+    const LanguageModel = {
+      availability: async () => "available",
+      create: async () => ({ clone: async () => ({ prompt, destroy() {} }), destroy() {} }),
+    };
+    const events: { type: string; result?: Record<string, any> }[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
+    await createChecker(env({ fetch, LanguageModel })).run([{ id: "g", text: claim, sources: ["https://fda.example/"] }], (e: never) => events.push(e), {
+      engine: "model",
+    });
+    return events.find((e) => e.type === "result")!.result!;
+  };
+
+  it("parses ranges", () => {
+    expect(rangesIn("Green Tea (8 oz): 30\u201350 mg")).toEqual([{ lo: 30, hi: 50, text: "30\u201350" }]);
+    expect(rangesIn("between 30 and 50 milligrams")[0]).toMatchObject({ lo: 30, hi: 50 });
+    expect(figuresWithinClaimRanges("30\u201350 mg", "about 37 milligrams")).toEqual([{ figure: "37", range: "30\u201350" }]);
+    expect(figuresWithinClaimRanges("80\u2013100 mg", "30-50 milligrams")).toEqual([]);
+  });
+
+  it("doesn't accept a contradiction whose quote isn't on the page", async () => {
+    const r = await judgeWith("Green Tea (8 oz): 30\u201350 mg", {
+      verdict: "contradicted",
+      quote: "Green tea contains 37 milligrams per serving.",
+      explanation: "The passage gives 37 milligrams for green tea, not 30\u201350 mg.",
+    });
+    expect(r.verdict).not.toBe("contradicted");
+    expect(r.trace.overruled.reason).toBe("quote");
+    expect(r.explanation).toMatch(/didn't accept/);
+    expect(r.evidence.quote).not.toMatch(/Decaffeinated/);
+  });
+
+  it("doesn't accept a contradiction when the page's figure is inside the sentence's range", async () => {
+    const r = await judgeWith("Green Tea (8 oz): 30\u201350 mg", {
+      verdict: "contradicted",
+      quote: "green tea often has about 37 milligrams",
+      explanation: "The page says 37 milligrams, not 30\u201350 mg.",
+    });
+    expect(r.verdict).not.toBe("contradicted");
+    expect(r.trace.overruled).toMatchObject({ reason: "range", figure: "37", range: "30\u201350" });
+  });
+
+  it("keeps a real contradiction", async () => {
+    const r = await judgeWith("Green tea (8 oz) has 80\u2013100 mg of caffeine.", {
+      verdict: "contradicted",
+      quote: "An 8-ounce cup of green or black tea has 30-50 milligrams of caffeine",
+      explanation: "The page says 30\u201350 milligrams, not 80\u2013100.",
+    });
+    expect(r.verdict).toBe("contradicted");
+    expect(r.trace.overruled).toBeUndefined();
+  });
+
+  it("prefers a replacement sentence with the claim's figures, and shows none when nothing is close", () => {
+    const passage = "Decaffeinated teas still contain some caffeine. Green or black tea has 30-50 milligrams.";
+    expect(bestSentence(passage, "Green Tea (8 oz): 30\u201350 mg")).toMatch(/30-50/);
+    expect(bestSentence("The museum opens at nine on weekdays.", "Green Tea (8 oz): 30\u201350 mg")).toBe("");
   });
 });

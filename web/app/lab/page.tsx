@@ -102,13 +102,16 @@ export default function Lab() {
               </ul>
               <p>Caffeine is a stimulant that is naturally found in coffee, tea, and cacao beans.</p>
               <h3 className="text-[17px] font-semibold">Signs of too much caffeine</h3>
+              {/* Google wraps each item in its own div inside the list. */}
               <ul className="list-disc space-y-2 pl-6">
-                <li>Headache</li>
-                <li>Insomnia</li>
-                <li>Nervousness</li>
-                <li>
-                  Fast heartbeat <Cite href={MAYO} label="Mayo Clinic" />
-                </li>
+                <div><li>Headache</li></div>
+                <div><li>Insomnia</li></div>
+                <div><li>Nervousness</li></div>
+                <div>
+                  <li>
+                    Fast heartbeat <Cite href={MAYO} label="Mayo Clinic" />
+                  </li>
+                </div>
               </ul>
               <p>
                 Would you like information on{" "}

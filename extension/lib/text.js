@@ -127,3 +127,42 @@ export function coverage(claim, passage) {
   for (const t of c) if (p.has(t)) hit++;
   return hit / c.size;
 }
+
+/**
+ * Number ranges in a text, such as "30–50 mg", "30 to 50", or "between 30 and 50".
+ * @returns {{ lo: number, hi: number, text: string }[]}
+ */
+export function rangesIn(text) {
+  const out = [];
+  const t = canonNumbers(text).toLowerCase().replace(/,(?=\d{3}\b)/g, "");
+  for (const m of t.matchAll(/(?:between\s+)?(\d+(?:\.\d+)?)\s*(?:-|to|and)\s*(\d+(?:\.\d+)?)/g)) {
+    const a = Number(m[1]);
+    const b = Number(m[2]);
+    if (a < b) out.push({ lo: a, hi: b, text: `${m[1]}–${m[2]}` });
+  }
+  return out;
+}
+
+/**
+ * Figures in `text` that agree with a range the claim gives: a number inside
+ * it (37 for "30–50"), or a range that overlaps it. Used to catch a small
+ * model calling a match a contradiction.
+ * @returns {{ figure: string, range: string }[]}
+ */
+export function figuresWithinClaimRanges(claim, text) {
+  const ranges = rangesIn(claim);
+  if (ranges.length === 0) return [];
+  const claimNums = new Set(numbersIn(claim));
+  const out = [];
+  for (const r of rangesIn(text)) {
+    const hit = ranges.find((c) => r.lo <= c.hi && r.hi >= c.lo);
+    if (hit) out.push({ figure: r.text, range: hit.text });
+  }
+  for (const n of numbersIn(text)) {
+    if (claimNums.has(n)) continue;
+    const v = Number(n);
+    const hit = ranges.find((c) => v > c.lo && v < c.hi);
+    if (hit) out.push({ figure: n, range: hit.text });
+  }
+  return out;
+}

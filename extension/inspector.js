@@ -165,7 +165,26 @@ function renderPostprocess(d) {
       : section("How the verdict was decided", "Lite mode doesn't use an AI model. It compares words and figures between the sentence and each passage.");
   const list = el("ul", "steps");
   if (t.fellBack) list.append(step(false, "The model failed, so lite mode was used.", "Matching words and figures replaced the model for this sentence."));
-  if (t.mode === "model") {
+  if (t.overruled) {
+    list.append(step(false, 'The model said "contradicted."', t.modelExplanation ? `It wrote: "${t.modelExplanation}"` : ""));
+    list.append(
+      step(
+        false,
+        "Groundmark didn't accept that.",
+        t.overruled.reason === "quote"
+          ? `Calling a sentence contradicted needs the conflicting text on the page, and the model's quote ("${t.modelQuote || ""}") isn't there.`
+          : `The page's figure (${t.overruled.figure}) is within the sentence's range (${t.overruled.range}), so they agree rather than conflict.`,
+      ),
+    );
+    list.append(step(null, "The lite check decided instead.", t.rule || ""));
+    if (t.claimNumbers && t.claimNumbers.length) {
+      list.append(
+        t.numbersMatched
+          ? step(true, `Figures found: ${t.claimNumbers.join(", ")}.`, "Every figure in the sentence appears in the best passage.")
+          : step(false, `Figures missing: ${t.claimNumbers.join(", ")}.`, "At least one figure in the sentence doesn't appear in the best passage."),
+      );
+    }
+  } else if (t.mode === "model") {
     list.append(
       t.modelPickedPassage
         ? step(true, `The model cited passage ${t.chosenPassageId}.`, "That passage was one of the ones it was sent.")
@@ -177,7 +196,9 @@ function renderPostprocess(d) {
         : step(
             false,
             "Its quote didn't match the page, so it was replaced.",
-            `The model wrote "${t.modelQuote || ""}". You saw the closest real sentence instead${d.evidence ? `: "${d.evidence.quote}"` : ""}.`,
+            d.evidence?.quote
+              ? `The model wrote "${t.modelQuote || ""}". You saw the closest real sentence instead: "${d.evidence.quote}".`
+              : `The model wrote "${t.modelQuote || ""}". No sentence on the page was close enough, so no quote was shown.`,
           ),
     );
   } else {
@@ -197,7 +218,7 @@ function renderPostprocess(d) {
       null,
       `Confidence: ${level} (${Math.round(t.confidence * 100)}%).`,
       `Computed by Groundmark, not reported by the model. ${Math.round(t.overlap * 100)}% of the sentence's key words appear in the chosen passage${
-        t.mode === "model" ? `, and the quote ${t.quoteVerbatim ? "matched" : "didn't match"} the page.` : "."
+        t.mode === "model" && !t.overruled ? `, and the quote ${t.quoteVerbatim ? "matched" : "didn't match"} the page.` : "."
       }`,
     ),
   );
