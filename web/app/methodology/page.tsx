@@ -9,6 +9,15 @@ import { LIMITS } from "../../../extension/lib/checker.js";
 export const metadata: Metadata = {
   title: `Methodology | ${SITE.name}`,
   description: "How Groundmark finds claims, reads sources, prompts the on-device model, and decides each verdict.",
+  alternates: { canonical: "/methodology" },
+  openGraph: {
+    title: `Methodology | ${SITE.name}`,
+    description: "How Groundmark finds claims, reads sources, prompts the on-device model, and decides each verdict.",
+    url: "/methodology",
+    siteName: SITE.name,
+    type: "article",
+  },
+  twitter: { card: "summary_large_image", title: `Methodology | ${SITE.name}` },
 };
 
 const EXAMPLE_PROMPT = formatPrompt("Up to 400 milligrams of caffeine a day is considered safe for most adults.", [

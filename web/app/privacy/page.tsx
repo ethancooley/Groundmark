@@ -6,6 +6,15 @@ import { Mark } from "@/components/Nav";
 export const metadata: Metadata = {
   title: `Privacy policy | ${SITE.name}`,
   description: "What Groundmark reads, what it sends, and what it stores.",
+  alternates: { canonical: "/privacy" },
+  openGraph: {
+    title: `Privacy policy | ${SITE.name}`,
+    description: "What Groundmark reads, what it sends, and what it stores.",
+    url: "/privacy",
+    siteName: SITE.name,
+    type: "article",
+  },
+  twitter: { card: "summary_large_image", title: `Privacy policy | ${SITE.name}` },
 };
 
 const UPDATED = "October 19, 2026";

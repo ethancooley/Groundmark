@@ -14,6 +14,12 @@ export const metadata: Metadata = {
     url: SITE.url,
     siteName: SITE.name,
   },
+  // A large image card on X; it uses the same image as the Open Graph preview.
+  twitter: {
+    card: "summary_large_image",
+    title: SITE.name,
+    description: SITE.tagline,
+  },
 };
 
 export const viewport: Viewport = {
